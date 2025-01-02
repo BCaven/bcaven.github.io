@@ -7,6 +7,8 @@ filename: README.md
 
 Computer Science at Notre Dame - Seeking a M.S.C.S.
 
+Currently working on projects involving computer vision, vfx, and distributed systems.
+
 All of my projects are on github, here are some of my favorites:
 
 - [elgato light library](https://github.com/BCaven/elgato-light-library)

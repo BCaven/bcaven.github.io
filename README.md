@@ -1,7 +1,8 @@
 # Blake Caven
 
 [linkedin](https://www.linkedin.com/in/blake-caven/) \
-[github](https://github.com/bcaven/)
+[github](https://github.com/bcaven/) \
+[portfolio](portfolio.md)
 
 I am a Computer Science student at the University of Notre Dame with an interest in real-world applications for software development. \
 Right now I am working on projects dealing with computer vision, distributed systems, and visual effects.\

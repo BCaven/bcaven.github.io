@@ -5,7 +5,7 @@
 [portfolio](portfolio.md)
 
 I am a Computer Science student at the University of Notre Dame with an interest in real-world applications for software development. \
-Right now I am working on projects dealing with computer vision, distributed systems, and visual effects.\
+Right now I am working on projects dealing with computer vision, distributed systems, and visual effects. \
 I am pursuing a Masters of Computer Science degree in the 2025/2026 academic year at the University of Notre Dame.
 
 > Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions.
@@ -17,7 +17,7 @@ University of Notre Dame: M.S. in Computer Science, Class of 2026
 
 # Experience:
 
-## Researcher in GUESS Lab: Spring 2025 - present
+## Researcher in [GESS Lab](https://github.com/gessLab): Spring 2025 - present
 
 Developed real-time simulations in C++ under Professor Dan Rehberg.
 
@@ -64,7 +64,7 @@ Built using Flask and ThreeJS.
 ## Innovate-o-thon: Fall 2021, Spring 2022
 
 Engineering Innovate-o-thon at University of Notre Dame hosted by Marmon Industries. \
-I led my team to the top prize of $2,000 in the Fall 2021 competition and the Spring 2022 competition. \
+I led my team to the top prize of $2,000 in the Fall 2021 competition and the Spring 2022 competition.
 
 # Extra:
 

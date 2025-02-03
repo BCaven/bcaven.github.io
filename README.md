@@ -1,12 +1,11 @@
 # Blake Caven
 
 [linkedin](https://www.linkedin.com/in/blake-caven/) \
-[github](https://github.com/bcaven/) \
-[portfolio](portfolio.md)
+[github](https://github.com/bcaven/) 
 
 I am a Computer Science student at the University of Notre Dame with an interest in real-world applications for software development. \
 Right now I am working on projects dealing with computer vision, distributed systems, and visual effects. \
-I am pursuing a Masters of Computer Science degree in the 2025/2026 academic year at the University of Notre Dame.
+I am pursuing a Masters of Computer Science degree at the University of Notre Dame.
 
 > Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions.
 

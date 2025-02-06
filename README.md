@@ -7,7 +7,7 @@ I am a Computer Science student at the University of Notre Dame with an interest
 Right now I am working on projects dealing with computer vision, distributed systems, and visual effects. \
 I am pursuing a Masters of Computer Science degree at the University of Notre Dame.
 
-> Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions.
+> Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions, Prompt Engineering.
 
 # Education:
 
@@ -29,10 +29,11 @@ Taught advanced concepts in compositing and simulation design using Houdini, Ble
 
 Worked for CDW Corp's government business, providing subject matter expertise and on-campus technical sale support as part of CDW's account team serving the University of Notre Dame to provide custom solutions for the University's IT strategy.
 
-## Researcher in the DHARMA Lab: Spring 2022 - Summer 2024
+## Researcher in the [DHARMA Lab](https://dharma3d.org/dharma.crc.nd.edu/index.html): Spring 2022 - Summer 2024
 
-Researched under Dr. Krushe and Dr. Wang in [DHARMA](https://dharma3d.org/dharma.crc.nd.edu/index.html). \
-Part of multi-disciplinary team of Computer Science and Architecture researchers that completed a digital restoration of the Roman Forum and created a sea level rise visualization using ArcGIS to predict where future problems will occur.
+Researched under Dr. Krushe and Dr. Wang in DHARMA. \
+Part of multi-disciplinary team of Computer Science and Architecture researchers that completed a digital restoration of the Roman Forum and created a sea level rise visualization using ArcGIS to predict where future problems will occur. \
+I am co-author on [Visualizing Digital Architectural Data for Heritage Education](https://par.nsf.gov/servlets/purl/10399514).
 
 ## Assistant Tennis Coach at JTCC Bolles: Summer 2023
 
@@ -53,7 +54,7 @@ Tested with up to 256 simultaneous clients. Average latency of 0.075 seconds wit
 ## [Elgato Light Strip Controller](https://github.com/BCaven/elgato-light-controller): Fall 2023 - present
 
 Network orchestration for IOT devices: Controller that autonomously controlled Elgato Light Strips using the reverse engineered API.\
-This controller has been running continuously since December 2023.
+This controller has been running continuously since December 2023. In 2024 the project got redone to be more pythonic and I used an LLM to automatically apply changes across the program (such as replacing a custom logging module with the built-in python `logging` module.
 
 ## [Creativity Optional](https://github.com/BCaven/creativity-optional): Spring 2024 - present
 
@@ -64,6 +65,10 @@ Built using Flask and ThreeJS.
 
 Engineering Innovate-o-thon at University of Notre Dame hosted by Marmon Industries. \
 I led my team to the top prize of $2,000 in the Fall 2021 competition and the Spring 2022 competition.
+
+# Publications:
+
+[Brown, Chase J., et al. "Visualizing digital architectural data for heritage education." IS&T Conference on Visualization and Data Analysis. 2023.](https://par.nsf.gov/servlets/purl/10399514)
 
 # Extra:
 

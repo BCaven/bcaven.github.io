@@ -7,12 +7,14 @@ I am a Computer Science student at the University of Notre Dame with an interest
 Right now I am working on projects dealing with computer vision, distributed systems, and visual effects. \
 I am pursuing a Masters of Computer Science degree at the University of Notre Dame.
 
-> Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions, Prompt Engineering, C++.
+In my free time I play tennis and ping pong, dance, and run LLMs locally on machines that have no business running them.
+
+> Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions, Prompt Engineering, C++, OpenGL, GLSL
 
 # Education:
 
-University of Notre Dame: B.S. in Computer Science in Engineering, Class of 2025 \
-University of Notre Dame: M.S. in Computer Science, Class of 2026
+University of Notre Dame: M.S. in Computer Science, Class of 2026 \ 
+University of Notre Dame: B.S. in Computer Science in Engineering, Class of 2025
 
 # Experience:
 

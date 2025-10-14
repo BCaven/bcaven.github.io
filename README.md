@@ -4,12 +4,12 @@
 [github](https://github.com/bcaven/) 
 
 I am a Computer Science student at the University of Notre Dame with an interest in real-world applications for software development. \
-Right now I am working on projects dealing with computer vision, distributed systems, and visual effects. \
+Right now I am working on projects combining computer vision and visual effects at Notre Dame Studios. \
 I am pursuing a Masters of Computer Science degree at the University of Notre Dame.
 
-In my free time I play tennis and ping pong, dance, and run LLMs locally on machines that have no business running them.
+In my free time I play tennis and ping pong, volleyball, and get creative with the ingredients in my kitchen.
 
-> Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions, Prompt Engineering, C++, OpenGL, GLSL
+> Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions, Prompt Engineering, C++, OpenGL, GLSL, UE5, DeckLink, Godot
 
 # Education:
 
@@ -18,18 +18,27 @@ University of Notre Dame: B.S. in Computer Science in Engineering, Class of 2025
 
 # Experience:
 
+## Software developer at Notre Dame Studios: Summer 2025- present
+
+I pitched and built a virtual production studio using UE5 from the ground up. It was presented as proof-of-concept to the Office of Digital Learning and the Acting Vice President for Academic and Community Technology Experience at Notre Dame. I also created custom plugins in c++ for UE5 to customize and run machine learning models using Blueprints, and to utilize libtorch to process incoming video frames in real time with minimal latency.
+
 ## Researcher in [GESS Lab](https://github.com/gessLab): Spring 2025 - present
 
-Developed real-time simulations in C++ under Professor Dan Rehberg.
+Developed real-time simulations in C++ under Professor Dan Rehberg. My first project was developing an in-texture physics system and the second was using computer vision models in real time to enhance the interactivity of 3D scenes.
+
+## Teaching Assistant: Fall 2025
+
+Served as Graduate Teaching Assistant under Professor Dan Rehberg for Game Development (CSE 40439). \
+Taught introduction concepts in Godot and did two guest lectures: one on *alternative uses of game engines* and another on *best practices in Godot*.
+
+## On-Campus Intern at CDW: Fall 2024 - present
+
+Worked for CDW Corp's government business, providing subject matter expertise and on-campus technical sale support as part of CDW's account team serving the University of Notre Dame to provide custom solutions for the University's IT strategy. I worked closely with Athletics, the Center for Research Computing, and the Office of Information Technology.
 
 ## Teaching Assistant: Spring 2025
 
 Served as Teaching Assistant under Professor John Slaughter for Visual Effects II (CSE 40777). \
 Taught advanced concepts in compositing and simulation design using Houdini, Blender, and Adobe After Effects.
-
-## On-Campus Intern at CDW: Fall 2024 - present
-
-Worked for CDW Corp's government business, providing subject matter expertise and on-campus technical sale support as part of CDW's account team serving the University of Notre Dame to provide custom solutions for the University's IT strategy.
 
 ## Researcher in the [DHARMA Lab](https://dharma3d.org/dharma.crc.nd.edu/index.html): Spring 2022 - Summer 2024
 
@@ -53,12 +62,12 @@ I assisted aspiring young athletes ranging from 4-18 years old on their tennis j
 Distributed Systems Architecture: server cluster with sequential consistency that dynamically created and removed servers to match server load. \
 Tested with up to 256 simultaneous clients. Average latency of 0.075 seconds with 256 connected clients.
 
-## [Elgato Light Strip Controller](https://github.com/BCaven/elgato-light-controller): Fall 2023 - present
+## [Elgato Light Strip Controller](https://github.com/BCaven/elgato-light-controller): Fall 2023
 
 Network orchestration for IOT devices: Controller that autonomously controlled Elgato Light Strips using the reverse engineered API.\
-This controller has been running continuously since December 2023. In 2024 the project got redone to be more pythonic and I used an LLM to automatically apply changes across the program (such as replacing a custom logging module with the built-in python `logging` module.
+This controller has been running continuously since December 2023. In 2024 the project got redone to be more pythonic and I used an LLM to automatically apply changes across the program (such as replacing a custom logging module with the built-in python `logging` module).
 
-## [Creativity Optional](https://github.com/BCaven/creativity-optional): Spring 2024 - present
+## [Creativity Optional](https://github.com/BCaven/creativity-optional): Spring 2024
 
 Real-time Streaming Processor: Lead developer for OSS that allows the user to send arbitrary real-time data to a custom 3D scene. \
 Built using Flask and ThreeJS.
@@ -75,5 +84,5 @@ I led my team to the top prize of $2,000 in the Fall 2021 competition and the Sp
 # Extra:
 
 Study Abroad in London: Summer 2022 \
-Fleadh Cheoil Set Dancing and Sean-Nós: Summer 2024 \
+Fleadh Cheoil Set Dancing and Sean-Nós: Summer 2024, Summer 2025 \
 Notre Dame Club Tennis: Fall 2022 - present

@@ -13,7 +13,7 @@ In my free time I play tennis and volleyball, get creative with the ingredients 
 
 # Education:
 
-University of Notre Dame: M.S. in Computer Science, Class of 2026 \ 
+University of Notre Dame: M.S. in Computer Science, Class of 2026 \
 University of Notre Dame: B.S. in Computer Science in Engineering, Class of 2025
 
 # Experience:

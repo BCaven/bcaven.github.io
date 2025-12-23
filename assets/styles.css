@@ -7,6 +7,8 @@ body {
   min-height: 100vh;
   color: #fff;
   margin: 0;
+  /* match background color to the fountain image for a seamless look while loading or on cover gaps */
+  background-color: #000000;
   /* Fountain image lives in the same assets/ folder as this stylesheet */
   background-image: url("fountain.png");
   background-repeat: no-repeat;

@@ -1,30 +1,353 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Blake Caven</title>
-  <link rel="stylesheet" href="assets/styles.css">
+    <meta charset="UTF-8">
+    <title>Three.js Hexagon Image Map</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #111; 
+        
+        }
+        canvas { display: block; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-family: sans-serif; pointer-events: none;
+        }
+        /* Embedded HTML container (iframe) */
+        .embed-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.2);
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+            z-index: 2000;
+            display: block; /* visible by default */
+        }
+        .embed-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.6); color:#fff; font-family:sans-serif }
+        .embed-frame { width:100%; height:calc(100% - 44px); border:0; display:block }
+        .embed-close { background:transparent; color:#fff; border:0; font-size:16px; cursor:pointer }
+
+        .embed-container::-webkit-scrollbar {
+           display: none;
+        }
+        /* Try to hide scrollbars on embedded iframes (CSS3D objects)
+           Note: some scrollbars come from the iframe's document; setting
+           attributes/styles here hides browser scrollbars on the iframe element.
+        */
+        iframe {
+            -ms-overflow-style: none; /* IE and old Edge */
+            scrollbar-width: none;   /* Firefox */
+            overflow: auto;          /* allow scrolling */
+            -webkit-overflow-scrolling: touch;
+        }
+        iframe::-webkit-scrollbar {
+            width: 0;  /* hide WebKit scrollbar */
+            height: 0;
+        }
+    </style>
 </head>
 <body>
-  <nav class="nav-menu" aria-label="Main navigation">
-    <a href="portfolio.html">Portfolio</a>
-    <a href="ND_Studios_VirtProd.html">ND Studios</a>
-    <a href="CV.html">CV</a>
 
-  </nav>
-  <div class="content">
-    <h1>Blake Caven</h1>
-    <p><a href="https://www.linkedin.com/in/blake-caven/">linkedin</a> | <a href="https://github.com/bcaven/">github</a> | <a href="assets/Resume-Blake-Caven-Fall25.pdf">Resume</a>
-    <p>I am a Computer Science student at the University of Notre Dame with an interest in real-world applications.<br>
-    Right now I am working on projects combining computer vision and visual effects at Notre Dame Studios.<br>
-    I am pursuing a Masters of Computer Science degree at the University of Notre Dame.</p>
+    <div id="loading">Loading Image & Generating Grid...</div>
 
-    <p>In my free time I play tennis and volleyball, get creative with the ingredients in my kitchen, and learn about good practices in teams.</p>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
 
-    <blockquote>
-      <p>Skills: Embedded programming, micropython, electrical engineering, multicast, Python, raspberry pi, CAD, Embedded C++, arduino, HTML, JavaScript, Websockets, Flask, Celery, ThreeJS, Vue, Docker, AWS, Potree, Blender, Maya, Linux, Team management, Prototyping and deploying solutions, Prompt Engineering, C++, OpenGL, GLSL, UE5, DeckLink, Godot</p>
-    </blockquote>
-  </div>
+    <script>
+        // --- CONFIGURATION ---
+        const HEX_SIZE = 20;      // Radius of the hexagon
+        const HEX_SPACING = 0.1;   // Gap between hexagons
+        const HEX_HEIGHT_SCALE = 300; // Scale factor for height based on brightness
+        // Image to load (Must support CORS if loaded from external URL)
+        const IMAGE_URL = 'https://bcaven.github.io/assets/fountain.png';
+
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        const camX = 2;
+        const camY = -2;
+        camera.position.set(camX, camY, 9);
+        camera.lookAt(camX, camY, 0);
+        // Small interactive camera offset driven by pointer position
+        let pointerX = 0;
+        let pointerY = 0;
+        // Reference to the portrait mesh so we can show/hide it
+        let portraitMesh = null;
+            // Remember the last embedded URL so we can decide visibility even if load order varies
+            let lastEmbedURL = '';
+        // sensitivity multiplier for how far the camera pans
+        const CAMERA_POINTER_SENSITIVITY = 2.0;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // CSS3D renderer and scene for HTML elements in 3D space
+        const cssScene = new THREE.Scene();
+        const cssRenderer = new THREE.CSS3DRenderer();
+        cssRenderer.setSize(window.innerWidth, window.innerHeight);
+        cssRenderer.domElement.style.position = 'absolute';
+        cssRenderer.domElement.style.top = '0';
+        cssRenderer.domElement.style.left = '0';
+        cssRenderer.domElement.style.pointerEvents = 'none'; // enable when iframe added
+        document.body.appendChild(cssRenderer.domElement);
+
+        // --- LIGHTING ---
+        // We add light so the 3D shape of the hexagons is visible
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(10, 10, 10);
+        scene.add(dirLight);
+
+        // --- MAIN LOGIC ---
+
+        function loadImageAndCreateGrid() {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = IMAGE_URL;
+
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                const scaleFactor = 1; 
+                canvas.width = img.width * scaleFactor;
+                canvas.height = img.height * scaleFactor;
+                
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                createHexGrid(imageData);
+                document.getElementById('loading').style.display = 'none';
+            };
+
+            img.onerror = () => {
+                document.getElementById('loading').innerText = "Error loading image";
+            };
+        }
+
+        function createHexGrid(imageData) {
+            const { width, height, data } = imageData;
+
+            const r = HEX_SIZE;
+            const horizDist = Math.sqrt(3) * (r + HEX_SPACING / 2);
+            const vertDist = (r + HEX_SPACING / 2) * 1.5;
+
+            const cols = Math.max(1, Math.ceil(width / HEX_SIZE));
+            const rows = Math.max(1, Math.ceil(height / HEX_SIZE));
+
+            const gridWidth = cols * horizDist;
+            const gridHeight = rows * vertDist;
+
+            // --- INSTANCED MESH SETUP ---
+            const geometry = new THREE.CylinderGeometry(r, r, 100, 6);
+            geometry.rotateX(Math.PI / 2);
+            const material = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.1 });
+            
+            const count = cols * rows;
+            const mesh = new THREE.InstancedMesh(geometry, material, count);
+
+            const dummy = new THREE.Object3D();
+            const color = new THREE.Color();
+            let index = 0;
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    // Sample image at the center of the cell (clamped) for better color matching
+                    const sampleX = Math.min(width - 1, Math.floor((x + 0.5) * (width / cols)));
+                    const sampleY = Math.min(height - 1, Math.floor((y + 0.5) * (height / rows)));
+                    const pixelIndex = (sampleY * width + sampleX) * 4;
+                    const rVal = data[pixelIndex] / 255;
+                    const gVal = data[pixelIndex + 1] / 255;
+                    const bVal = data[pixelIndex + 2] / 255;
+
+                    // Offset every odd row
+                    const xOffset = (y % 2 === 1) ? horizDist / 2 : 0;
+
+                    const posX = (x * horizDist) + xOffset - (gridWidth / 2);
+                    const posY = -(y * vertDist) + (gridHeight / 2);
+                    const posZ = ((rVal + gVal + bVal) / 3) * HEX_HEIGHT_SCALE; // Height based on brightness
+                    dummy.position.set(posX, posY, posZ);
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(index, dummy.matrix);
+
+                    
+                    color.setRGB(rVal, gVal, bVal);
+                    mesh.setColorAt(index, color);
+                    index++;
+                }
+            }
+            mesh.instanceMatrix.needsUpdate = true;
+            if (mesh.instanceColor) {
+                mesh.instanceColor.needsUpdate = true;
+            }
+            scene.add(mesh);
+
+            // Hide the DOM overlay iframe (we'll embed it in 3D instead)
+            //const overlay = document.getElementById('embed');
+            //if (overlay) overlay.style.display = 'none';
+
+            // Create a 3D embedded iframe positioned to the left of the grid
+            const embedX = -1 + camX;
+            const embedY = -1 + camY;
+            const embedZ = -1.5;
+            let embeddedObj = createEmbedded3D('landingpage.html', embedX, embedY, embedZ);
+            // Load and add the portrait image as a textured plane in the 3D scene
+            const texLoader = new THREE.TextureLoader();
+                texLoader.load('assets/blake_on_air.JPEG', (tex) => {
+                    const img = tex.image;
+                    const aspect = (img && img.width && img.height) ? (img.width / img.height) : 1;
+                    const planeHeight = 8; // world units (adjust as needed)
+                    const planeWidth = planeHeight * aspect;
+                    const planeGeom = new THREE.PlaneGeometry(planeWidth, planeHeight);
+                    const planeMat = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide });
+                    const plane = new THREE.Mesh(planeGeom, planeMat);
+                    // place to the right of the camera/grid and give slight rotation for depth
+                    plane.position.set(camX + 4.0, camY, 0.5);
+                    plane.visible = false; // start hidden until we confirm the embed URL
+                    scene.add(plane);
+                    portraitMesh = plane;
+                    // Ensure visibility reflects the current embedded URL (handles race where iframe loaded earlier)
+                    if (lastEmbedURL) {
+                        portraitMesh.visible = lastEmbedURL.indexOf('landingpage.html') !== -1;
+                    }
+            }, undefined, (err) => { console.warn('Failed to load portrait texture', err); });
+            // Scale mesh so the entire grid fits in the camera frustum
+            const camDist = 15;
+            const vFOV = THREE.MathUtils.degToRad(camera.fov);
+            const frustumHeight = 2 * Math.tan(vFOV / 2) * camDist;
+            const frustumWidth = frustumHeight * (window.innerWidth / window.innerHeight);
+
+            const scale = 0.95 * Math.min(frustumWidth / gridWidth, frustumHeight / gridHeight);
+            const finalScale = Math.min(scale, 1);
+            mesh.scale.set(finalScale, finalScale, finalScale);
+        }
+
+        // pointer input -> normalized -0.5..0.5
+        window.addEventListener('pointermove', (e) => {
+            pointerX = (e.clientX / window.innerWidth) - 0.5;
+            pointerY = (e.clientY / window.innerHeight) - 0.5;
+        }, { passive: true });
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // smoothly nudge camera toward pointer-based offset
+            const targetX = camX + pointerX * CAMERA_POINTER_SENSITIVITY;
+            const targetY = camY + pointerY * CAMERA_POINTER_SENSITIVITY * -1; // invert Y so moving pointer up moves camera up
+            const lerpFactor = 0.01;
+            camera.position.x += (targetX - camera.position.x) * lerpFactor;
+            camera.position.y += (targetY - camera.position.y) * lerpFactor;
+            camera.lookAt(camera.position.x, camera.position.y, 0);
+
+            renderer.render(scene, camera);
+            cssRenderer.render(cssScene, camera);
+        }
+
+        // Start
+        loadImageAndCreateGrid();
+        animate();
+
+        // --- Embed helpers ---
+        function showEmbed(url) {
+            const wrap = document.getElementById('embed');
+            const frame = document.getElementById('embedFrame');
+            frame.src = url;
+            wrap.style.display = 'block';
+            wrap.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeEmbed() {
+            const wrap = document.getElementById('embed');
+            const frame = document.getElementById('embedFrame');
+            frame.src = '';
+            wrap.style.display = 'none';
+            wrap.setAttribute('aria-hidden', 'true');
+        }
+
+        // Create a CSS3D iframe in 3D space at (x,y,z)
+        function createEmbedded3D(url, x = 0, y = 0, z = 2, pxWidth = 1000, pxHeight = 700) {
+            // enable pointer events so iframe can receive input
+            cssRenderer.domElement.style.pointerEvents = 'auto';
+
+            // remember this URL for portrait visibility checks
+            lastEmbedURL = url || '';
+
+            const iframe = document.createElement('iframe');
+            iframe.src = url;
+            iframe.style.width = pxWidth + 'px';
+            iframe.style.height = pxHeight + 'px';
+            iframe.style.border = '0';
+            iframe.style.overflow = 'auto';
+            iframe.style.overflowY = 'auto';
+            iframe.style.overflowX = 'auto';
+            iframe.setAttribute('frameBorder', '0');
+
+            // Try to keep camera responding to pointer when cursor is over the iframe.
+            // If the iframe is same-origin we can listen to pointermove inside it and
+            // map coordinates back to the parent. If not, we fall back to listening
+            // for pointer events on the iframe element itself.
+            iframe.addEventListener('load', () => {
+                // record the loaded URL (may be resolved to absolute) so other code can react
+                try { lastEmbedURL = iframe.contentWindow.location.href || iframe.src || url; } catch(e) { lastEmbedURL = iframe.src || url; }
+                try {
+                    // Same-origin: attach to iframe's window to get pointer positions
+                    iframe.contentWindow.addEventListener('pointermove', (ev) => {
+                        const rect = iframe.getBoundingClientRect();
+                        // ev.clientX/Y are relative to the iframe's viewport, translate to parent
+                        const clientX = rect.left + ev.clientX;
+                        const clientY = rect.top + ev.clientY;
+                        pointerX = (clientX / window.innerWidth) - 0.5;
+                        pointerY = (clientY / window.innerHeight) - 0.5;
+                    }, { passive: true });
+                    // update portrait visibility when iframe loads (same-origin path)
+                    if (portraitMesh) {
+                        portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
+                    }
+                } catch (e) {
+                    // Cross-origin or access denied: fallback to pointer events on the iframe element
+                    iframe.addEventListener('pointermove', (ev) => {
+                        pointerX = (ev.clientX / window.innerWidth) - 0.5;
+                        pointerY = (ev.clientY / window.innerHeight) - 0.5;
+                    }, { passive: true });
+                    // update portrait visibility when iframe loads (cross-origin path)
+                    if (portraitMesh) {
+                        portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
+                    }
+                }
+            });
+
+            const cssObject = new THREE.CSS3DObject(iframe);
+            cssObject.position.set(x, y, z);
+            // scale down so CSS pixels map to scene units (adjust as needed)
+            const scaleFactor = 0.02; // tuned experimentally
+            cssObject.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            cssScene.add(cssObject);
+            // ensure portrait visibility is set based on the iframe URL right away
+            if (portraitMesh) portraitMesh.visible = iframe.src && iframe.src.indexOf('landingpage.html') !== -1;
+            return cssObject;
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            cssRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
 </body>
 </html>

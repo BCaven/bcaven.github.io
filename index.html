@@ -73,17 +73,25 @@
         scene.background = new THREE.Color(0x000000);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-        const camX = 2;
+        // compute camX based on viewport width; smaller screens get a smaller camX
+        function getCamXForWidth(w) {
+            return (w < 700) ? -1 : 2.0;
+        }
+        let camX = getCamXForWidth(window.innerWidth);
+        console.log("Initial camX:", camX);
         const camY = -2;
         camera.position.set(camX, camY, 9);
         camera.lookAt(camX, camY, 0);
+        // store default camera position so we can restore after mobile-focus adjustments
         // Small interactive camera offset driven by pointer position
         let pointerX = 0;
         let pointerY = 0;
         // Reference to the portrait mesh so we can show/hide it
         let portraitMesh = null;
-            // Remember the last embedded URL so we can decide visibility even if load order varies
-            let lastEmbedURL = '';
+        // Remember the last embedded URL so we can decide visibility even if load order varies
+        let lastEmbedURL = '';
+        // track created CSS3D frames so we can recompute scales on resize
+        const embeddedFrames = [];
         // sensitivity multiplier for how far the camera pans
         const CAMERA_POINTER_SENSITIVITY = 2.0;
 
@@ -198,30 +206,33 @@
             //const overlay = document.getElementById('embed');
             //if (overlay) overlay.style.display = 'none';
 
-            // Create a 3D embedded iframe positioned to the left of the grid
-            const embedX = -1 + camX;
+            const embedX = 3;
             const embedY = -1 + camY;
             const embedZ = -1.5;
             let embeddedObj = createEmbedded3D('landingpage.html', embedX, embedY, embedZ);
             // Load and add the portrait image as a textured plane in the 3D scene
             const texLoader = new THREE.TextureLoader();
-                texLoader.load('assets/blake_on_air.JPEG', (tex) => {
-                    const img = tex.image;
-                    const aspect = (img && img.width && img.height) ? (img.width / img.height) : 1;
-                    const planeHeight = 8; // world units (adjust as needed)
-                    const planeWidth = planeHeight * aspect;
-                    const planeGeom = new THREE.PlaneGeometry(planeWidth, planeHeight);
-                    const planeMat = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide });
-                    const plane = new THREE.Mesh(planeGeom, planeMat);
-                    // place to the right of the camera/grid and give slight rotation for depth
-                    plane.position.set(camX + 4.0, camY, 0.5);
-                    plane.visible = false; // start hidden until we confirm the embed URL
-                    scene.add(plane);
-                    portraitMesh = plane;
-                    // Ensure visibility reflects the current embedded URL (handles race where iframe loaded earlier)
-                    if (lastEmbedURL) {
-                        portraitMesh.visible = lastEmbedURL.indexOf('landingpage.html') !== -1;
-                    }
+            texLoader.load('assets/blake_on_air.JPEG', (tex) => {
+                const img = tex.image;
+                const aspect = (img && img.width && img.height) ? (img.width / img.height) : 1;
+                // compute a responsive world-space height for the portrait based on camera frustum
+                const planeZ = 0.5;
+                const planeHeight = 7;
+                const planeWidth = planeHeight * aspect;
+                const planeGeom = new THREE.PlaneGeometry(planeWidth, planeHeight);
+                const planeMat = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide });
+                const plane = new THREE.Mesh(planeGeom, planeMat);
+                plane.position.set(6, camY, planeZ);
+                plane.visible = false; // start hidden until we confirm the embed URL
+                // store base dimensions so we can rescale on resize
+                plane.userData.baseWidth = planeWidth;
+                plane.userData.baseHeight = planeHeight;
+                scene.add(plane);
+                portraitMesh = plane;
+                // Ensure visibility reflects the current embedded URL (handles race where iframe loaded earlier)
+                if (lastEmbedURL) {
+                    portraitMesh.visible = lastEmbedURL.indexOf('landingpage.html') !== -1;
+                }
             }, undefined, (err) => { console.warn('Failed to load portrait texture', err); });
             // Scale mesh so the entire grid fits in the camera frustum
             const camDist = 15;
@@ -229,8 +240,7 @@
             const frustumHeight = 2 * Math.tan(vFOV / 2) * camDist;
             const frustumWidth = frustumHeight * (window.innerWidth / window.innerHeight);
 
-            const scale = 0.95 * Math.min(frustumWidth / gridWidth, frustumHeight / gridHeight);
-            const finalScale = Math.min(scale, 1);
+            const finalScale = 0.0047;
             mesh.scale.set(finalScale, finalScale, finalScale);
         }
 
@@ -331,12 +341,13 @@
 
             const cssObject = new THREE.CSS3DObject(iframe);
             cssObject.position.set(x, y, z);
-            // scale down so CSS pixels map to scene units (adjust as needed)
-            const scaleFactor = 0.02; // tuned experimentally
+
+            const scaleFactor = 0.02;
             cssObject.scale.set(scaleFactor, scaleFactor, scaleFactor);
             cssScene.add(cssObject);
             // ensure portrait visibility is set based on the iframe URL right away
-            if (portraitMesh) portraitMesh.visible = iframe.src && iframe.src.indexOf('landingpage.html') !== -1;
+            if (portraitMesh) portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
+            // also update portrait layout now (in case texture loaded earlier)
             return cssObject;
         }
 
@@ -346,6 +357,8 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             cssRenderer.setSize(window.innerWidth, window.innerHeight);
+            // update camX and default camera X for new viewport width
+            camX = getCamXForWidth(window.innerWidth);
         });
 
     </script>

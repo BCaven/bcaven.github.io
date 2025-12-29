@@ -17,6 +17,17 @@ body {
   scrollbar-width: none;
 }
 
+#mobilecontent
+{
+    position:absolute; 
+    left: 0; 
+    right: 0; 
+    bottom: 0; 
+    top: 0px; 
+    background-color: #000000FF;
+    overflow: hidden;
+}
+
 /* Hide scrollbars across browsers but preserve scrolling */
 html, body {
   -ms-overflow-style: none; /* IE and Edge */

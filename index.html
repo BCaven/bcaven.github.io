@@ -65,13 +65,13 @@
         function maybeRedirectToLanding() {
             try {
                 const href = window.location.href;
-                if (window.innerWidth < 500) {
-                    // use replace so back button doesn't return here
-                    window.location.replace('landingpage.html');
+                if (window.innerWidth < 800) {
+                    window.location.replace('mobile.html');
                 }
-            } catch (e) { /* ignore in restrictive environments */ }
+            } catch (e) {}
         }
-        maybeRedirectToLanding();
+        maybeRedirectToLanding(); 
+
         // --- CONFIGURATION ---
         const HEX_SIZE = 20;      // Radius of the hexagon
         const HEX_SPACING = 0.1;   // Gap between hexagons
@@ -89,7 +89,6 @@
             return (w < 700) ? -1 : 2.0;
         }
         let camX = getCamXForWidth(window.innerWidth);
-        console.log("Initial camX:", camX);
         const camY = -2;
         camera.position.set(camX, camY, 9);
         camera.lookAt(camX, camY, 0);
@@ -118,6 +117,7 @@
         cssRenderer.domElement.style.top = '0';
         cssRenderer.domElement.style.left = '0';
         cssRenderer.domElement.style.pointerEvents = 'none'; // enable when iframe added
+        cssRenderer.domElement.style.background = 'transparent';
         document.body.appendChild(cssRenderer.domElement);
 
         // --- LIGHTING ---
@@ -370,8 +370,8 @@
             cssRenderer.setSize(window.innerWidth, window.innerHeight);
             // update camX and default camera X for new viewport width
             camX = getCamXForWidth(window.innerWidth);
-            if (window.innerWidth < 500 && !window.location.href.includes('landingpage.html')) {
-                window.location.replace('landingpage.html');
+            if (window.innerWidth < 800 && !window.location.href.includes('landingpage.html')) {
+                window.location.replace('mobile.html');
             }
         });
 

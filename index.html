@@ -61,6 +61,17 @@
     <script src="https://unpkg.com/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
 
     <script>
+        // Redirect very small screens to the landing page for a simpler layout
+        function maybeRedirectToLanding() {
+            try {
+                const href = window.location.href;
+                if (window.innerWidth < 500) {
+                    // use replace so back button doesn't return here
+                    window.location.replace('landingpage.html');
+                }
+            } catch (e) { /* ignore in restrictive environments */ }
+        }
+        maybeRedirectToLanding();
         // --- CONFIGURATION ---
         const HEX_SIZE = 20;      // Radius of the hexagon
         const HEX_SPACING = 0.1;   // Gap between hexagons
@@ -207,7 +218,7 @@
             //if (overlay) overlay.style.display = 'none';
 
             const embedX = 3;
-            const embedY = -1 + camY;
+            const embedY = -2 ;
             const embedZ = -1.5;
             let embeddedObj = createEmbedded3D('landingpage.html', embedX, embedY, embedZ);
             // Load and add the portrait image as a textured plane in the 3D scene
@@ -359,6 +370,9 @@
             cssRenderer.setSize(window.innerWidth, window.innerHeight);
             // update camX and default camera X for new viewport width
             camX = getCamXForWidth(window.innerWidth);
+            if (window.innerWidth < 500 && !window.location.href.includes('landingpage.html')) {
+                window.location.replace('landingpage.html');
+            }
         });
 
     </script>

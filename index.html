@@ -64,8 +64,7 @@
         // Redirect very small screens to the landing page for a simpler layout
         function maybeRedirectToLanding() {
             try {
-                const href = window.location.href;
-                if (window.innerWidth < 800) {
+                if (window.innerWidth < window.innerHeight) {
                     window.location.replace('mobile.html');
                 }
             } catch (e) {}
@@ -370,7 +369,7 @@
             cssRenderer.setSize(window.innerWidth, window.innerHeight);
             // update camX and default camera X for new viewport width
             camX = getCamXForWidth(window.innerWidth);
-            if (window.innerWidth < 800 && !window.location.href.includes('landingpage.html')) {
+            if (window.innerWidth < window.innerHeight && !window.location.href.includes('landingpage.html')) {
                 window.location.replace('mobile.html');
             }
         });

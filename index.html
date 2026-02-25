@@ -313,6 +313,7 @@
             iframe.style.overflow = 'auto';
             iframe.style.overflowY = 'auto';
             iframe.style.overflowX = 'auto';
+            iframe.style.pointerEvents = 'auto'; // allow clicks inside iframe
             iframe.setAttribute('frameBorder', '0');
 
             // Try to keep camera responding to pointer when cursor is over the iframe.
@@ -322,6 +323,43 @@
             iframe.addEventListener('load', () => {
                 // record the loaded URL (may be resolved to absolute) so other code can react
                 try { lastEmbedURL = iframe.contentWindow.location.href || iframe.src || url; } catch(e) { lastEmbedURL = iframe.src || url; }
+                // Make only external links open in a new tab; allow same-origin navigation inside iframe.
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (doc) {
+                        const origin = iframe.contentWindow.location.origin;
+                        doc.querySelectorAll('a[href]').forEach((link) => {
+                            // use URL to resolve relative HREFs
+                            let href;
+                            try {
+                                href = new URL(link.getAttribute('href'), origin).href;
+                            } catch (_) {
+                                href = link.href;
+                            }
+                            try {
+                                const urlObj = new URL(href);
+                                // treat links to the resume PDF as external even though they are same-origin
+                            if (urlObj.origin !== origin || urlObj.pathname.endsWith('Resume-Blake-Caven-Fall25.pdf')) {
+                                    link.setAttribute('target', '_blank');
+                                    // intercept click and open externally
+                                    link.addEventListener('click', (evt) => {
+                                        window.open(href, '_blank');
+                                        evt.preventDefault();
+                                    });
+                                }
+                            } catch (err) {
+                                // if URL parsing fails, conservatively open externally
+                                link.setAttribute('target', '_blank');
+                                link.addEventListener('click', (evt) => {
+                                    window.open(href, '_blank');
+                                    evt.preventDefault();
+                                });
+                            }
+                        });
+                    }
+                } catch (e) {
+                    // ignore cross-origin restrictions
+                }
                 try {
                     // Same-origin: attach to iframe's window to get pointer positions
                     iframe.contentWindow.addEventListener('pointermove', (ev) => {

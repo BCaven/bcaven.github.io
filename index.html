@@ -99,10 +99,16 @@
         let portraitMesh = null;
         // Remember the last embedded URL so we can decide visibility even if load order varies
         let lastEmbedURL = '';
-        // track created CSS3D frames so we can recompute scales on resize
-        const embeddedFrames = [];
-        // sensitivity multiplier for how far the camera pans
-        const CAMERA_POINTER_SENSITIVITY = 2.0;
+        let mesh;
+        let debugSphere = null;
+        // For grid raising
+        const raycaster = new THREE.Raycaster();
+        const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        const mouse = new THREE.Vector2();
+        const dummy = new THREE.Object3D();
+        let basePositions = [];
+        let baseZs = [];
+        let finalScale = 0.0047;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -118,6 +124,8 @@
         cssRenderer.domElement.style.pointerEvents = 'none'; // enable when iframe added
         cssRenderer.domElement.style.background = 'transparent';
         document.body.appendChild(cssRenderer.domElement);
+
+
 
         // --- LIGHTING ---
         // We add light so the 3D shape of the hexagons is visible
@@ -172,13 +180,15 @@
             const geometry = new THREE.CylinderGeometry(r, r, 100, 6);
             geometry.rotateX(Math.PI / 2);
             const material = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.1 });
-            
-            const count = cols * rows;
-            const mesh = new THREE.InstancedMesh(geometry, material, count);
 
-            const dummy = new THREE.Object3D();
+            const count = cols * rows;
+            mesh = new THREE.InstancedMesh(geometry, material, count);
+
             const color = new THREE.Color();
             let index = 0;
+
+            basePositions = [];
+            baseZs = [];
 
             for (let y = 0; y < rows; y++) {
                 for (let x = 0; x < cols; x++) {
@@ -200,9 +210,10 @@
                     dummy.updateMatrix();
                     mesh.setMatrixAt(index, dummy.matrix);
 
-                    
                     color.setRGB(rVal, gVal, bVal);
                     mesh.setColorAt(index, color);
+                    basePositions[index] = new THREE.Vector3(posX, posY, 0);
+                    baseZs[index] = posZ;
                     index++;
                 }
             }
@@ -211,6 +222,14 @@
                 mesh.instanceColor.needsUpdate = true;
             }
             scene.add(mesh);
+
+            if (!debugSphere) {
+                const sphereGeo = new THREE.SphereGeometry(1, 16, 16);
+                const sphereMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000 });
+                debugSphere = new THREE.Mesh(sphereGeo, sphereMat);
+                debugSphere.visible = false;
+                scene.add(debugSphere);
+            }
 
             // Hide the DOM overlay iframe (we'll embed it in 3D instead)
             //const overlay = document.getElementById('embed');
@@ -250,7 +269,7 @@
             const frustumHeight = 2 * Math.tan(vFOV / 2) * camDist;
             const frustumWidth = frustumHeight * (window.innerWidth / window.innerHeight);
 
-            const finalScale = 0.0047;
+            finalScale = 0.0047;
             mesh.scale.set(finalScale, finalScale, finalScale);
         }
 
@@ -258,19 +277,45 @@
         window.addEventListener('pointermove', (e) => {
             pointerX = (e.clientX / window.innerWidth) - 0.5;
             pointerY = (e.clientY / window.innerHeight) - 0.5;
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
         }, { passive: true });
 
         // --- ANIMATION LOOP ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // smoothly nudge camera toward pointer-based offset
-            const targetX = camX + pointerX * CAMERA_POINTER_SENSITIVITY;
-            const targetY = camY + pointerY * CAMERA_POINTER_SENSITIVITY * -1; // invert Y so moving pointer up moves camera up
-            const lerpFactor = 0.01;
-            camera.position.x += (targetX - camera.position.x) * lerpFactor;
-            camera.position.y += (targetY - camera.position.y) * lerpFactor;
-            camera.lookAt(camera.position.x, camera.position.y, 0);
+            if (!mesh || basePositions.length === 0) {
+                camera.lookAt(camX, camY, 0);
+                renderer.render(scene, camera);
+                cssRenderer.render(cssScene, camera);
+                return;
+            }
+
+            // Update grid heights based on mouse position
+            raycaster.setFromCamera(mouse, camera);
+            const intersect = raycaster.ray.intersectPlane(plane, new THREE.Vector3());
+            if (intersect) {
+                const localMouse = intersect.clone().divideScalar(finalScale);
+                const radius = 2000; // in base-grid units, same as basePositions
+
+                for (let i = 0; i < basePositions.length; i++) {
+                    const basePos = basePositions[i];
+                    const dist = basePos.distanceTo(localMouse);
+                    let raise = 0; // raise amount
+                    
+                    if (baseZs[i] > 0) {
+                        raise = dist < radius ? (((1 - dist / radius) * baseZs[i]) ** 2) / 100 : 0; // raise amount
+                    }
+                    const newZ = baseZs[i] + raise;
+                    dummy.position.set(basePos.x, basePos.y, newZ);
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(i, dummy.matrix);
+                }
+                mesh.instanceMatrix.needsUpdate = true;
+            }
+
+            camera.lookAt(camX, camY, 0);
 
             renderer.render(scene, camera);
             cssRenderer.render(cssScene, camera);
@@ -369,6 +414,8 @@
                         const clientY = rect.top + ev.clientY;
                         pointerX = (clientX / window.innerWidth) - 0.5;
                         pointerY = (clientY / window.innerHeight) - 0.5;
+                        mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                        mouse.y = -(clientY / window.innerHeight) * 2 + 1;
                     }, { passive: true });
                     // update portrait visibility when iframe loads (same-origin path)
                     if (portraitMesh) {
@@ -379,6 +426,8 @@
                     iframe.addEventListener('pointermove', (ev) => {
                         pointerX = (ev.clientX / window.innerWidth) - 0.5;
                         pointerY = (ev.clientY / window.innerHeight) - 0.5;
+                        mouse.x = pointerX;
+                        mouse.y = pointerY;
                     }, { passive: true });
                     // update portrait visibility when iframe loads (cross-origin path)
                     if (portraitMesh) {

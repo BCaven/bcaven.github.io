@@ -50,7 +50,7 @@
       <figcaption>Raw depth map normalized. The raw depth map is a grayscale containing the raw 32-bit estimated depth per pixel.</figcaption>
     </figure>
     <p>After the depth maps have been generated, they were converted into a digital twin using Geometry Nodes in Blender. Each pixel was scaled away from the camera origin such that from the camera's perspective the pixel does not change location. The geometry was then exported as a .USD geometry cache and sent to UE5.</p>
-    <p>USD was chosen for its support of complex animated geometry and seamless integration into UE5 using geometry caches with UE5's Sequencer.</p>
+    <p>OpenUSD was chosen for its support of complex animated geometry and seamless integration into UE5 using geometry caches with UE5's Sequencer.</p>
     <figure>
       <img src="assets/depth_demo_wrong_angle.png" alt="Depth Demo — Geometry seen from the wrong angle">
       <figcaption>The geometry as seen from the a different perspective.</figcaption>

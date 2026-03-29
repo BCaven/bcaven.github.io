@@ -297,7 +297,7 @@
             const intersect = raycaster.ray.intersectPlane(plane, new THREE.Vector3());
             if (intersect) {
                 const localMouse = intersect.clone().divideScalar(finalScale);
-                const radius = 2000; // in base-grid units, same as basePositions
+                const radius = 3000; // in base-grid units, same as basePositions
 
                 for (let i = 0; i < basePositions.length; i++) {
                     const basePos = basePositions[i];
@@ -305,7 +305,7 @@
                     let raise = 0; // raise amount
                     
                     if (baseZs[i] > 0) {
-                        raise = dist < radius ? (((1 - dist / radius) * baseZs[i]) ** 2) / 100 : 0; // raise amount
+                        raise = dist < radius ? (((1 - dist / radius) * baseZs[i] * 2) ** 2) / 100 : 0; // raise amount
                     }
                     const newZ = baseZs[i] + raise;
                     dummy.position.set(basePos.x, basePos.y, newZ);

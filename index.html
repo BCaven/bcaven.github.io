@@ -114,6 +114,10 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
+        // velocity follow mouse
+        let currentMouse = new THREE.Vector3(0, 0, 0);
+        let velocity = new THREE.Vector3(0, 0, 0);
+
         // CSS3D renderer and scene for HTML elements in 3D space
         const cssScene = new THREE.Scene();
         const cssRenderer = new THREE.CSS3DRenderer();
@@ -296,12 +300,21 @@
             raycaster.setFromCamera(mouse, camera);
             const intersect = raycaster.ray.intersectPlane(plane, new THREE.Vector3());
             if (intersect) {
-                const localMouse = intersect.clone().divideScalar(finalScale);
+                const currentlocalMouse = intersect.clone().divideScalar(finalScale);
+                // currentMouse
+                const accel  = currentlocalMouse.clone().sub(currentMouse);
+                accel.multiplyScalar(0.01); // smoothing factor
+
+                velocity.add(accel);
+                velocity.multiplyScalar(0.90); // friction
+                if (velocity.length() < 0.1) velocity.setLength(0);
+                currentMouse.add(velocity);
+
                 const radius = 3000; // in base-grid units, same as basePositions
 
                 for (let i = 0; i < basePositions.length; i++) {
                     const basePos = basePositions[i];
-                    const dist = basePos.distanceTo(localMouse);
+                    const dist = basePos.distanceTo(currentMouse);
                     let raise = 0; // raise amount
                     
                     if (baseZs[i] > 0) {

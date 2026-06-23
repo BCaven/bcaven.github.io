@@ -11,22 +11,29 @@
     <a href="landingpage.html">Home</a>
   </nav>
   <div class="content">
-    <h1><a href="https://github.com/BCaven/RaytracingInAWeekend">Ray tracing</a> Development</h1>
+    <h1><a href="https://github.com/BCaven/OfflineRaytracing">Ray tracing</a> Development</h1>
 
-    <p>Built a Monte Carlo ray tracer in C++ based on the tutorials RaytracingInAWeekend, RaytracingTheNextWeek, and RaytracingTheRestOfYourLife.</p>
+    <p>Built a Monte Carlo ray tracer in C++ based on the <a href="https://raytracing.github.io/">tutorials</a> RaytracingInAWeekend, RaytracingTheNextWeek, and RaytracingTheRestOfYourLife.</p>
 
     <figure>
       <img src="https://raw.githubusercontent.com/BCaven/RaytracingInAWeekend/refs/heads/master/thecouncil.png" alt="Raytracer demo">
-      <figcaption>ray tracing example scene</figcaption>
+      <figcaption>early example scene - 4000 samples</figcaption>
+    </figure>
+    <figure>
+      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracing/refs/heads/master/restofmylife.png" alt="Raytracer multiple lights demo">
+      <figcaption>later example scene with many lights - 1000 samples</figcaption>
     </figure>
 
     <p>
-      In addition to the base functionality from the tutorials, I implemented multi-core chunk based rendering, 
-      triangle-based mesh structures with custom UV maps, and a custom file format to import meshes into the raytracer from Blender.
+      In addition to the base functionality from the tutorials, I implemented multi-core tile based rendering, 
+      instanced triangle mesh structures with custom UV maps, nested Bounding Volume Hierarchies, 
+      and a custom file format to import meshes into the raytracer from Blender.
+      <br>
+      I also added support for Gaussian Splats as native objects so they support reflections, shadows, and relighting.
     </p>
 
     <p>
-      Further work is being done on writing the ray tracer in HLSL.
+      Further work is being done on a real-time ray tracer in C++ and Slang using Vulkan.
     </p>
   
 

@@ -11,12 +11,37 @@
     <a href="landingpage.html">Home</a>
   </nav>
   <div class="content">
-    <h1><a href="https://github.com/BCaven/OfflineRaytracingCPU">Ray tracing</a> Development</h1>
+    <h1><a href="https://github.com/BCaven/OfflineRaytracingGPU">Ray tracing</a> Development</h1>
+    <h2>GPU Path tracer in C++ and Slang</h2>
 
-    <p>Built a Monte Carlo ray tracer in C++ based on the <a href="https://raytracing.github.io/">tutorials</a> RaytracingInAWeekend, RaytracingTheNextWeek, and RaytracingTheRestOfYourLife.</p>
+    <p>Built a GPU-accelerated path tracer in Slang and C++ using Vulkan</p>
 
     <figure>
-      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingCPU/refs/heads/master/tomato_in_cornell_box.png" alt="Gaussian Splat demo">
+      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingGPU/refs/heads/master/ProjectAssets/transformed_spheres.png" alt="Gaussian Splat demo">
+      <figcaption>Mix of Gaussian Splats and Transformed Spheres</figcaption>
+    </figure>
+
+    <p>
+      A full writeup of the project can be found <a href="https://github.com/BCaven/OfflineRaytracingGPU/README.md">on GitHub</a>.
+      <br>
+      Here is a list of notable features:
+      <ul>
+        <li>Sphere, Triangle, and Gaussian Splat primitives</li>
+        <li>Instancing via Transform primitives (location, rotation, scale)</li>
+        <li>Progressive path tracing with temporal accumulation</li>
+        <li>Binary AABB interior nodes</li>
+        <li>Wide K-DOP interior nodes</li>
+        <li>Arbitrary nested transforms</li>
+        <li>Arbitrary nested instances</li>
+      </ul>
+    </p>
+
+    <h2>CPU Path tracer in C++</h2>
+
+    <p>Built a Monte Carlo path tracer in C++ based on the <a href="https://raytracing.github.io/">tutorials</a> RaytracingInAWeekend, RaytracingTheNextWeek, and RaytracingTheRestOfYourLife.</p>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingCPU/refs/heads/master/tomato_in_cornell_box_new_normals.png" alt="Gaussian Splat demo">
       <figcaption>Gaussian Splat demo in Cornell Box - 200 samples</figcaption>
     </figure>
     <figure>

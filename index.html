@@ -173,23 +173,7 @@
         // default: interactive so iframe is usable and we still attach element-level pointer listeners
         setIframeInteractive(true);
 
-        // Debug overlay for pointer / viewport diagnostics
-        const debugOverlay = document.createElement('div');
-        debugOverlay.id = 'debugOverlay';
-        debugOverlay.style.position = 'fixed';
-        debugOverlay.style.right = '8px';
-        debugOverlay.style.bottom = '8px';
-        debugOverlay.style.zIndex = '9999';
-        debugOverlay.style.background = 'rgba(0,0,0,0.6)';
-        debugOverlay.style.color = '#0f0';
-        debugOverlay.style.fontFamily = 'monospace';
-        debugOverlay.style.fontSize = '12px';
-        debugOverlay.style.padding = '6px 8px';
-        debugOverlay.style.borderRadius = '6px';
-        debugOverlay.style.pointerEvents = 'none';
-        debugOverlay.style.whiteSpace = 'nowrap';
-        debugOverlay.innerText = '';
-        document.body.appendChild(debugOverlay);
+        // (debug overlay removed)
 
         // Content overlay (single DOM iframe used for loading content pages on top of the background)
         const contentOverlay = document.createElement('div');
@@ -247,11 +231,11 @@
         function openContent(url, push = true) {
             if (!url) return;
             const abs = new URL(url, location.href).href;
-            try { console.debug('[openContent] url=', url, 'abs=', abs, 'cached=', contentCache.has(abs)); } catch(_) {}
+            // opening content overlay
             contentOverlay.style.display = 'block';
             // try to rewrite links on same-origin pages after load; inject pointer forwarder when possible
             function onLoad() {
-                try { console.debug('[contentFrame] load event for', abs); } catch(_) {}
+                // contentFrame load
                 try {
                     const doc = contentFrame.contentDocument || contentFrame.contentWindow.document;
                     if (doc) {
@@ -283,11 +267,10 @@
                         const script = doc.createElement('script');
                         script.textContent = "(function(){try{function send(cX,cY){parent.postMessage({type:'pointer',clientX:cX,clientY:cY,pageX:Math.round(cX+(window.scrollX||document.documentElement.scrollLeft||0)),pageY:Math.round(cY+(window.scrollY||document.documentElement.scrollTop||0))},'*');}function onpm(e){try{var rect=window.frameElement.getBoundingClientRect();var w=window.frameElement.clientWidth||window.frameElement.offsetWidth||rect.width||1;var h=window.frameElement.clientHeight||window.frameElement.offsetHeight||rect.height||1;var sx=(rect.width||w)/w;var sy=(rect.height||h)/h;var cx=rect.left + e.clientX * sx;var cy=rect.top + e.clientY * sy;send(Math.round(cx),Math.round(cy));}catch(_){}}window.addEventListener('pointermove',onpm,{passive:true});parent.postMessage({type:'pointer-ready'},'*');}catch(_){} })();";
                         (doc.head || doc.documentElement).appendChild(script);
-                        try { console.debug('[contentFrame] pointer forwarder injected'); } catch(_) {}
                     }
                 } catch (err) {
                     // injection failed (cross-origin or blocked) — fall back to element-level pointer events
-                    try { console.debug('[contentFrame] pointer forwarder injection failed, adding element-level pointermove fallback'); } catch(_) {}
+                    // pointer forwarder injection failed; fall back to element-level pointermove
                     try { contentFrame.addEventListener('pointermove', handlePointerEvent, { passive: true }); } catch(_) {}
                 }
                 contentFrame.removeEventListener('load', onLoad);
@@ -328,7 +311,6 @@
 
         // allow embedded pages to ask parent to navigate and forward pointer events
         window.addEventListener('message', (ev) => {
-            try { console.debug('[parent.message] received', ev.data && ev.data.type, ev.data); } catch(_) {}
             if (!ev.data || typeof ev.data !== 'object') return;
             if (ev.data.type === 'navigate' && typeof ev.data.url === 'string') {
                 try {
@@ -336,7 +318,6 @@
                     let handled = false;
                     try {
                         if (contentFrame && contentFrame.contentWindow === ev.source) {
-                            console.debug('[parent.message] navigate from contentFrame -> openContent', ev.data.url);
                             openContent(ev.data.url);
                             handled = true;
                         }
@@ -349,7 +330,6 @@
                                 try {
                                     if (child.element.contentWindow === ev.source) {
                                         // update that embedded iframe in-place instead of opening overlay
-                                        console.debug('[parent.message] navigate from cssRenderer iframe -> updating embedded iframe src to', ev.data.url);
                                         child.element.src = ev.data.url;
                                         lastEmbedURL = ev.data.url;
                                         if (portraitMesh) portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
@@ -362,7 +342,6 @@
                     }
                     if (!handled) {
                         // fallback: open as content overlay
-                        console.debug('[parent.message] navigate fallback -> openContent', ev.data.url);
                         openContent(ev.data.url);
                     }
                 } catch(_) {}
@@ -388,7 +367,6 @@
                             try { const u = new URL(page); if (u.origin === location.origin) page = u.pathname.replace(/^\//, ''); } catch(_) {}
                         }
                         requestedPage = page || requestedPage;
-                        console.debug('[checkInitialContent] requestedPage set to', requestedPage);
                     } catch (e) {}
                 }
                 // If user landed directly on a known subpage (e.g. /raytracing.html), redirect to index.html with ?content=path
@@ -397,21 +375,14 @@
                     const path = window.location.pathname.replace(/^\//, '');
                     if (path && path.toLowerCase() !== 'index.html' && knownSubpages.indexOf(path) !== -1) {
                         const target = 'index.html?content=' + encodeURIComponent('/' + path);
-                        console.debug('[checkInitialContent] redirecting subpage', path, '->', target);
                         window.location.replace(target);
                     }
                 } catch(_) {}
             } catch (e) {}
         })();
 
-        function updateDebugOverlay(clientX, clientY) {
-            const vw = getViewportWidth();
-            const vh = getViewportHeight();
-            debugOverlay.innerText = `clientX:${Math.round(clientX)} clientY:${Math.round(clientY)} vw:${vw} vh:${vh} dpr:${(window.devicePixelRatio||1).toFixed(2)}`;
-        }
 
-
-
+        
         // --- LIGHTING ---
         // We add light so the 3D shape of the hexagons is visible
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -597,8 +568,7 @@
                 const base = (child.userData && child.userData.baseScale) ? child.userData.baseScale : 1;
                 child.scale.set(base * scale, base * scale, base * scale);
             }
-            // Also scale the debug overlay inversely so it stays readable when the page is zoomed
-            debugOverlay.style.transform = `scale(${1 / Math.max(scale, 0.0001)})`;
+            // no debug overlay
         }
 
         function handlePointerEvent(e) {
@@ -611,7 +581,6 @@
             const vh = getViewportHeight();
             mouse.x = (clientX / vw) * 2 - 1;
             mouse.y = -(clientY / vh) * 2 + 1;
-            updateDebugOverlay(clientX, clientY);
         }
 
         // Handle pointer coordinates forwarded from same-origin iframe content
@@ -625,7 +594,6 @@
             const vh = getViewportHeight();
             mouse.x = (clientX / vw) * 2 - 1;
             mouse.y = -(clientY / vh) * 2 + 1;
-            updateDebugOverlay(clientX, clientY);
             lastIframePointerTime = Date.now();
         }
 
@@ -750,7 +718,7 @@
             // map coordinates back to the parent. If not, we fall back to listening
             // for pointer events on the iframe element itself.
             iframe.addEventListener('load', () => {
-                try { console.debug('[embedded iframe] load', iframe.src); } catch(_) {}
+                // embedded iframe loaded
                 // record the loaded URL (may be resolved to absolute) so other code can react
                 try { lastEmbedURL = iframe.contentWindow.location.href || iframe.src || url; } catch(e) { lastEmbedURL = iframe.src || url; }
                 // Make only external links open in a new tab; allow same-origin navigation inside iframe.
@@ -784,7 +752,6 @@
                                                 evt.preventDefault();
                                                 iframe.src = href;
                                                 lastEmbedURL = href;
-                                                console.debug('[embedded iframe] navigated iframe to', href);
                                                 if (portraitMesh) portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
                                             } catch (_) { }
                                         });

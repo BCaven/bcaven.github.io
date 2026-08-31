@@ -102,10 +102,11 @@
         const camY = -2;
         camera.position.set(camX, camY, 9);
         camera.lookAt(camX, camY, 0);
-        // store default camera position so we can restore after mobile-focus adjustments
-        // Small interactive camera offset driven by pointer position
-        let pointerX = 0;
-        let pointerY = 0;
+
+        // Which page the embedded CSS3D iframe should load by default.
+        // This may be overridden by the ?content=... query parameter parsed below.
+        let requestedPage = 'landingpage.html';
+
         // Reference to the portrait mesh so we can show/hide it
         let portraitMesh = null;
         // Remember the last embedded URL so we can decide visibility even if load order varies
@@ -122,6 +123,8 @@
         let finalScale = 0.0047;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
+        // ensure correct pixel ratio and initial sizing for first-load render
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
@@ -136,9 +139,276 @@
         cssRenderer.domElement.style.position = 'absolute';
         cssRenderer.domElement.style.top = '0';
         cssRenderer.domElement.style.left = '0';
-        cssRenderer.domElement.style.pointerEvents = 'none'; // enable when iframe added
+        cssRenderer.domElement.style.pointerEvents = 'none'; // toggled by setIframeInteractive()
         cssRenderer.domElement.style.background = 'transparent';
         document.body.appendChild(cssRenderer.domElement);
+
+        // Full-screen transparent overlay to capture pointer events reliably
+        const interactionOverlay = document.createElement('div');
+        interactionOverlay.id = 'interactionOverlay';
+        interactionOverlay.style.position = 'fixed';
+        interactionOverlay.style.left = '0';
+        interactionOverlay.style.top = '0';
+        interactionOverlay.style.width = '100%';
+        interactionOverlay.style.height = '100%';
+        interactionOverlay.style.zIndex = '9998';
+        interactionOverlay.style.background = 'transparent';
+        interactionOverlay.style.pointerEvents = 'auto';
+        document.body.appendChild(interactionOverlay);
+
+        let iframeFocused = false; // whether iframe should accept pointer events
+        let lastIframePointerTime = 0;
+        function setIframeInteractive(enabled) {
+            // toggle pointer-events on all CSS3D iframes
+            cssScene.children.forEach(child => {
+                if (child.element && child.element.tagName === 'IFRAME') {
+                    child.element.style.pointerEvents = enabled ? 'auto' : 'none';
+                }
+            });
+            iframeFocused = !!enabled;
+            // also toggle pointer events on the CSS3D renderer DOM so iframe children can receive input
+            try { cssRenderer.domElement.style.pointerEvents = enabled ? 'auto' : 'none'; } catch (_) {}
+            interactionOverlay.style.display = enabled ? 'none' : 'block';
+        }
+        // default: interactive so iframe is usable and we still attach element-level pointer listeners
+        setIframeInteractive(true);
+
+        // Debug overlay for pointer / viewport diagnostics
+        const debugOverlay = document.createElement('div');
+        debugOverlay.id = 'debugOverlay';
+        debugOverlay.style.position = 'fixed';
+        debugOverlay.style.right = '8px';
+        debugOverlay.style.bottom = '8px';
+        debugOverlay.style.zIndex = '9999';
+        debugOverlay.style.background = 'rgba(0,0,0,0.6)';
+        debugOverlay.style.color = '#0f0';
+        debugOverlay.style.fontFamily = 'monospace';
+        debugOverlay.style.fontSize = '12px';
+        debugOverlay.style.padding = '6px 8px';
+        debugOverlay.style.borderRadius = '6px';
+        debugOverlay.style.pointerEvents = 'none';
+        debugOverlay.style.whiteSpace = 'nowrap';
+        debugOverlay.innerText = '';
+        document.body.appendChild(debugOverlay);
+
+        // Content overlay (single DOM iframe used for loading content pages on top of the background)
+        const contentOverlay = document.createElement('div');
+        contentOverlay.id = 'contentOverlay';
+        contentOverlay.style.position = 'fixed';
+        contentOverlay.style.left = '0';
+        contentOverlay.style.top = '0';
+        contentOverlay.style.width = '100%';
+        contentOverlay.style.height = '100%';
+        contentOverlay.style.zIndex = '10000';
+        contentOverlay.style.display = 'none';
+        contentOverlay.style.background = 'rgba(0,0,0,0.6)';
+        contentOverlay.style.backdropFilter = 'blur(4px)';
+
+        const contentFrame = document.createElement('iframe');
+        contentFrame.id = 'contentFrame';
+        contentFrame.style.width = '100%';
+        contentFrame.style.height = '100%';
+        contentFrame.style.border = '0';
+        contentFrame.style.display = 'block';
+        contentFrame.style.background = 'white';
+        contentFrame.style.pointerEvents = 'auto';
+        contentOverlay.appendChild(contentFrame);
+        // close button
+        const contentClose = document.createElement('button');
+        contentClose.innerText = '×';
+        contentClose.title = 'Close';
+        contentClose.style.position = 'absolute';
+        contentClose.style.right = '12px';
+        contentClose.style.top = '12px';
+        contentClose.style.zIndex = '10001';
+        contentClose.style.fontSize = '20px';
+        contentClose.style.background = 'transparent';
+        contentClose.style.color = '#fff';
+        contentClose.style.border = '0';
+        contentClose.style.cursor = 'pointer';
+        contentClose.addEventListener('click', () => { closeContent(); });
+        contentOverlay.appendChild(contentClose);
+        document.body.appendChild(contentOverlay);
+
+        // Simple cache for same-origin preloaded HTML
+        const contentCache = new Map();
+
+        function preloadContent(url) {
+            try {
+                const u = new URL(url, location.href);
+                if (u.origin !== location.origin) return Promise.resolve();
+                if (contentCache.has(u.href)) return Promise.resolve();
+                return fetch(u.href, {credentials: 'same-origin'}).then(r => r.text()).then(html => {
+                    contentCache.set(u.href, html);
+                }).catch(() => {});
+            } catch (e) { return Promise.resolve(); }
+        }
+
+        function openContent(url, push = true) {
+            if (!url) return;
+            const abs = new URL(url, location.href).href;
+            try { console.debug('[openContent] url=', url, 'abs=', abs, 'cached=', contentCache.has(abs)); } catch(_) {}
+            contentOverlay.style.display = 'block';
+            // try to rewrite links on same-origin pages after load; inject pointer forwarder when possible
+            function onLoad() {
+                try { console.debug('[contentFrame] load event for', abs); } catch(_) {}
+                try {
+                    const doc = contentFrame.contentDocument || contentFrame.contentWindow.document;
+                    if (doc) {
+                        // intercept internal links to route them via parent for consistent UX
+                        doc.querySelectorAll('a[href]').forEach(link => {
+                            try {
+                                const href = new URL(link.getAttribute('href'), abs).href;
+                                const urlObj = new URL(href);
+                                if (urlObj.origin === location.origin) {
+                                    link.addEventListener('click', (ev) => {
+                                        ev.preventDefault();
+                                        openContent(href);
+                                    });
+                                } else {
+                                    link.setAttribute('target', '_blank');
+                                    link.setAttribute('rel', 'noopener noreferrer');
+                                }
+                            
+                            } catch (e) {}
+                        });
+                    }
+                } catch (e) {
+                    // cross-origin: nothing to do
+                }
+                // Attempt to inject pointer-forwarder into same-origin framed pages so parent receives parent-relative client coords
+                try {
+                    const doc = contentFrame.contentDocument || contentFrame.contentWindow.document;
+                    if (doc && contentFrame.contentWindow) {
+                        const script = doc.createElement('script');
+                        script.textContent = "(function(){try{function send(cX,cY){parent.postMessage({type:'pointer',clientX:cX,clientY:cY,pageX:Math.round(cX+(window.scrollX||document.documentElement.scrollLeft||0)),pageY:Math.round(cY+(window.scrollY||document.documentElement.scrollTop||0))},'*');}function onpm(e){try{var rect=window.frameElement.getBoundingClientRect();var w=window.frameElement.clientWidth||window.frameElement.offsetWidth||rect.width||1;var h=window.frameElement.clientHeight||window.frameElement.offsetHeight||rect.height||1;var sx=(rect.width||w)/w;var sy=(rect.height||h)/h;var cx=rect.left + e.clientX * sx;var cy=rect.top + e.clientY * sy;send(Math.round(cx),Math.round(cy));}catch(_){}}window.addEventListener('pointermove',onpm,{passive:true});parent.postMessage({type:'pointer-ready'},'*');}catch(_){} })();";
+                        (doc.head || doc.documentElement).appendChild(script);
+                        try { console.debug('[contentFrame] pointer forwarder injected'); } catch(_) {}
+                    }
+                } catch (err) {
+                    // injection failed (cross-origin or blocked) — fall back to element-level pointer events
+                    try { console.debug('[contentFrame] pointer forwarder injection failed, adding element-level pointermove fallback'); } catch(_) {}
+                    try { contentFrame.addEventListener('pointermove', handlePointerEvent, { passive: true }); } catch(_) {}
+                }
+                contentFrame.removeEventListener('load', onLoad);
+            }
+            contentFrame.addEventListener('load', onLoad);
+            // if cached same-origin HTML exists, use srcdoc to render faster
+            if (contentCache.has(abs)) {
+                // include a base so relative links resolve correctly when using srcdoc
+                try { contentFrame.src = 'about:blank'; } catch(_) {}
+                contentFrame.srcdoc = '<base href="' + abs + '">' + contentCache.get(abs);
+            } else {
+                contentFrame.srcdoc = '';
+                contentFrame.src = abs;
+            }
+            if (push) {
+                // encode relative path for same-origin URLs to keep query compact and resolvable
+                try {
+                    const u = new URL(abs);
+                    const serialized = (u.origin === location.origin) ? (u.pathname + u.search + u.hash) : abs;
+                    history.pushState({content: abs}, '', '?content=' + encodeURIComponent(serialized));
+                } catch (e) {
+                    history.pushState({content: abs}, '', '?content=' + encodeURIComponent(abs));
+                }
+            }
+        }
+
+        function closeContent(push = true) {
+            contentOverlay.style.display = 'none';
+            try { contentFrame.src = 'about:blank'; contentFrame.srcdoc = ''; } catch(_) {}
+            if (push) history.pushState({}, '', window.location.pathname);
+        }
+
+        // handle popstate: restore/close content
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.content) openContent(e.state.content, false);
+            else closeContent(false);
+        });
+
+        // allow embedded pages to ask parent to navigate and forward pointer events
+        window.addEventListener('message', (ev) => {
+            try { console.debug('[parent.message] received', ev.data && ev.data.type, ev.data); } catch(_) {}
+            if (!ev.data || typeof ev.data !== 'object') return;
+            if (ev.data.type === 'navigate' && typeof ev.data.url === 'string') {
+                try {
+                    // Determine sender: is it the content overlay frame or a cssRenderer embedded iframe?
+                    let handled = false;
+                    try {
+                        if (contentFrame && contentFrame.contentWindow === ev.source) {
+                            console.debug('[parent.message] navigate from contentFrame -> openContent', ev.data.url);
+                            openContent(ev.data.url);
+                            handled = true;
+                        }
+                    } catch(_) {}
+                    if (!handled) {
+                        // look for a matching cssScene child whose iframe window is the message source
+                        for (let i = 0; i < cssScene.children.length; i++) {
+                            const child = cssScene.children[i];
+                            if (child && child.element && child.element.tagName === 'IFRAME') {
+                                try {
+                                    if (child.element.contentWindow === ev.source) {
+                                        // update that embedded iframe in-place instead of opening overlay
+                                        console.debug('[parent.message] navigate from cssRenderer iframe -> updating embedded iframe src to', ev.data.url);
+                                        child.element.src = ev.data.url;
+                                        lastEmbedURL = ev.data.url;
+                                        if (portraitMesh) portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
+                                        handled = true;
+                                        break;
+                                    }
+                                } catch (_) {}
+                            }
+                        }
+                    }
+                    if (!handled) {
+                        // fallback: open as content overlay
+                        console.debug('[parent.message] navigate fallback -> openContent', ev.data.url);
+                        openContent(ev.data.url);
+                    }
+                } catch(_) {}
+            }
+            if (ev.data.type === 'pointer') {
+                try { handlePointerCoordsFromIframe(ev.data); } catch(_) {}
+            }
+        });
+
+        // On initial load, check for ?content=... so direct links open overlay or redirect subpage hits to index
+        (function checkInitialContent() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const c = params.get('content');
+                if (c) {
+                    const decoded = decodeURIComponent(c);
+                    // If a ?content= flag is present, use it to set the embedded cssRenderer page
+                    try {
+                        // normalise leading slash
+                        let page = decoded.replace(/^\//, '');
+                        // if absolute URL, and same-origin, extract the pathname
+                        if (/^https?:\/\//i.test(page)) {
+                            try { const u = new URL(page); if (u.origin === location.origin) page = u.pathname.replace(/^\//, ''); } catch(_) {}
+                        }
+                        requestedPage = page || requestedPage;
+                        console.debug('[checkInitialContent] requestedPage set to', requestedPage);
+                    } catch (e) {}
+                }
+                // If user landed directly on a known subpage (e.g. /raytracing.html), redirect to index.html with ?content=path
+                const knownSubpages = ['landingpage.html','raytracing.html','GameEngine.html','ND_Studios_VirtProd.html','CV.html','portfolio.html'];
+                try {
+                    const path = window.location.pathname.replace(/^\//, '');
+                    if (path && path.toLowerCase() !== 'index.html' && knownSubpages.indexOf(path) !== -1) {
+                        const target = 'index.html?content=' + encodeURIComponent('/' + path);
+                        console.debug('[checkInitialContent] redirecting subpage', path, '->', target);
+                        window.location.replace(target);
+                    }
+                } catch(_) {}
+            } catch (e) {}
+        })();
+
+        function updateDebugOverlay(clientX, clientY) {
+            const vw = getViewportWidth();
+            const vh = getViewportHeight();
+            debugOverlay.innerText = `clientX:${Math.round(clientX)} clientY:${Math.round(clientY)} vw:${vw} vh:${vh} dpr:${(window.devicePixelRatio||1).toFixed(2)}`;
+        }
 
 
 
@@ -253,7 +523,7 @@
             const embedX = 3;
             const embedY = -2 ;
             const embedZ = -1.5;
-            let embeddedObj = createEmbedded3D('landingpage.html', embedX, embedY, embedZ);
+            let embeddedObj = createEmbedded3D(requestedPage || 'landingpage.html', embedX, embedY, embedZ);
             // Load and add the portrait image as a textured plane in the 3D scene
             const texLoader = new THREE.TextureLoader();
             texLoader.load('assets/blake_on_air.JPEG', (tex) => {
@@ -289,12 +559,98 @@
         }
 
         // pointer input -> normalized -0.5..0.5
-        window.addEventListener('pointermove', (e) => {
-            pointerX = (e.clientX / window.innerWidth) - 0.5;
-            pointerY = (e.clientY / window.innerHeight) - 0.5;
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        }, { passive: true });
+        // Viewport helper (use layout viewport size — avoids issues with visualViewport inconsistencies)
+        function getViewportWidth() {
+            return document.documentElement.clientWidth || window.innerWidth;
+        }
+        function getViewportHeight() {
+            return document.documentElement.clientHeight || window.innerHeight;
+        }
+
+                // Return page coordinates in a consistent way across browsers
+                function getEventPageCoords(ev) {
+                    const pageX = (ev.pageX !== undefined && ev.pageX !== null) ? ev.pageX : (ev.clientX + (window.scrollX || document.documentElement.scrollLeft || 0));
+                    const pageY = (ev.pageY !== undefined && ev.pageY !== null) ? ev.pageY : (ev.clientY + (window.scrollY || document.documentElement.scrollTop || 0));
+                    return { pageX, pageY };
+                }
+
+        // Centralized update for sizes and camera to handle resize/zoom consistently
+        function updateSizes() {
+            const vw = getViewportWidth();
+            const vh = getViewportHeight();
+            // update camera
+            camera.aspect = vw / vh;
+            camera.updateProjectionMatrix();
+            // restore camera position so it remains perpendicular after zoom/resize
+            camX = getCamXForWidth(vw);
+            camera.position.set(camX, camY, 9);
+            camera.lookAt(camX, camY, 0);
+
+            // update renderers
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            renderer.setSize(vw, vh);
+            cssRenderer.setSize(vw, vh);
+            // Apply page zoom scale to CSS3D objects so their DOM content scales with browser zoom
+            const scale = (window.visualViewport && window.visualViewport.scale) || 1;
+            for (let i = 0; i < cssScene.children.length; i++) {
+                const child = cssScene.children[i];
+                const base = (child.userData && child.userData.baseScale) ? child.userData.baseScale : 1;
+                child.scale.set(base * scale, base * scale, base * scale);
+            }
+            // Also scale the debug overlay inversely so it stays readable when the page is zoomed
+            debugOverlay.style.transform = `scale(${1 / Math.max(scale, 0.0001)})`;
+        }
+
+        function handlePointerEvent(e) {
+            // ignore parent pointer events immediately after receiving iframe-posted coords
+            if (Date.now() - lastIframePointerTime < 150) return;
+            const { pageX, pageY } = getEventPageCoords(e);
+            const clientX = pageX - (window.scrollX || document.documentElement.scrollLeft || 0);
+            const clientY = pageY - (window.scrollY || document.documentElement.scrollTop || 0);
+            const vw = getViewportWidth();
+            const vh = getViewportHeight();
+            mouse.x = (clientX / vw) * 2 - 1;
+            mouse.y = -(clientY / vh) * 2 + 1;
+            updateDebugOverlay(clientX, clientY);
+        }
+
+        // Handle pointer coordinates forwarded from same-origin iframe content
+        function handlePointerCoordsFromIframe(data) {
+            // data: {pageX, pageY, clientX, clientY}
+            const pageX = (data.pageX !== undefined) ? data.pageX : (data.clientX + (window.scrollX || document.documentElement.scrollLeft || 0));
+            const pageY = (data.pageY !== undefined) ? data.pageY : (data.clientY + (window.scrollY || document.documentElement.scrollTop || 0));
+            const clientX = pageX - (window.scrollX || document.documentElement.scrollLeft || 0);
+            const clientY = pageY - (window.scrollY || document.documentElement.scrollTop || 0);
+            const vw = getViewportWidth();
+            const vh = getViewportHeight();
+            mouse.x = (clientX / vw) * 2 - 1;
+            mouse.y = -(clientY / vh) * 2 + 1;
+            updateDebugOverlay(clientX, clientY);
+            lastIframePointerTime = Date.now();
+        }
+
+        // Attach both capture and bubble listeners for pointermove/mousemove so we still receive
+        // events when the cursor is over an iframe (some browsers dispatch differently).
+        window.addEventListener('pointermove', handlePointerEvent, { passive: true });
+        window.addEventListener('pointermove', handlePointerEvent, { passive: true, capture: true });
+        window.addEventListener('mousemove', handlePointerEvent, { passive: true, capture: true });
+
+        // Wire overlay to drive pointer handling and focus toggling for iframe interaction
+        interactionOverlay.addEventListener('pointermove', handlePointerEvent, { passive: true });
+        interactionOverlay.addEventListener('pointerdown', (e) => {
+            // enable iframe interaction on click
+            setIframeInteractive(true);
+            // focus the iframe under the click, if any
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (el && el.tagName === 'IFRAME') try { el.focus(); } catch(_) {}
+        });
+        // unfocus iframe with Escape key
+        window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        if (iframeFocused) setIframeInteractive(false);
+                        if (contentOverlay && contentOverlay.style.display === 'block') closeContent();
+                    }
+        });
 
         // --- ANIMATION LOOP ---
         function animate() {
@@ -348,6 +704,13 @@
         // Start
         loadImageAndCreateGrid();
         animate();
+        // Ensure camera / renderers compute correct sizes on initial load (fixes occasional angled grid)
+        updateSizes();
+        // Also respond to visualViewport changes (pinch-zoom / browser zoom in some engines)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', updateSizes);
+            window.visualViewport.addEventListener('scroll', updateSizes);
+        }
 
         // --- Embed helpers ---
         function showEmbed(url) {
@@ -368,9 +731,6 @@
 
         // Create a CSS3D iframe in 3D space at (x,y,z)
         function createEmbedded3D(url, x = 0, y = 0, z = 2, pxWidth = 1000, pxHeight = 700) {
-            // enable pointer events so iframe can receive input
-            cssRenderer.domElement.style.pointerEvents = 'auto';
-
             // remember this URL for portrait visibility checks
             lastEmbedURL = url || '';
 
@@ -390,6 +750,7 @@
             // map coordinates back to the parent. If not, we fall back to listening
             // for pointer events on the iframe element itself.
             iframe.addEventListener('load', () => {
+                try { console.debug('[embedded iframe] load', iframe.src); } catch(_) {}
                 // record the loaded URL (may be resolved to absolute) so other code can react
                 try { lastEmbedURL = iframe.contentWindow.location.href || iframe.src || url; } catch(e) { lastEmbedURL = iframe.src || url; }
                 // Make only external links open in a new tab; allow same-origin navigation inside iframe.
@@ -405,66 +766,67 @@
                             } catch (_) {
                                 href = link.href;
                             }
-                            try {
-                                const urlObj = new URL(href);
-                                // treat links to the resume PDF as external even though they are same-origin
-                            if (urlObj.origin !== origin || urlObj.pathname.endsWith('Resume-Blake-Caven-Fall25.pdf')) {
+                                try {
+                                    const urlObj = new URL(href);
+                                    // treat links to the resume PDF as external even though they are same-origin
+                                    if (urlObj.origin !== origin || urlObj.pathname.endsWith('Resume-Blake-Caven-Fall25.pdf')) {
+                                        link.setAttribute('target', '_blank');
+                                        // intercept click and open externally
+                                        link.addEventListener('click', (evt) => {
+                                            window.open(href, '_blank');
+                                            evt.preventDefault();
+                                        });
+                                    } else {
+                                        // same-origin: navigate the iframe in-place (no address change)
+                                        link.setAttribute('target', '_self');
+                                        link.addEventListener('click', (evt) => {
+                                            try {
+                                                evt.preventDefault();
+                                                iframe.src = href;
+                                                lastEmbedURL = href;
+                                                console.debug('[embedded iframe] navigated iframe to', href);
+                                                if (portraitMesh) portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
+                                            } catch (_) { }
+                                        });
+                                    }
+                                } catch (err) {
+                                    // if URL parsing fails, conservatively open externally
                                     link.setAttribute('target', '_blank');
-                                    // intercept click and open externally
                                     link.addEventListener('click', (evt) => {
                                         window.open(href, '_blank');
                                         evt.preventDefault();
                                     });
                                 }
-                            } catch (err) {
-                                // if URL parsing fails, conservatively open externally
-                                link.setAttribute('target', '_blank');
-                                link.addEventListener('click', (evt) => {
-                                    window.open(href, '_blank');
-                                    evt.preventDefault();
-                                });
-                            }
                         });
+                            // inject pointer forwarder into same-origin embedded iframe documents; fall back to element-level listener if injection fails
+                            try {
+                                const script = doc.createElement('script');
+                                script.textContent = "(function(){try{function send(cX,cY){parent.postMessage({type:'pointer',clientX:cX,clientY:cY,pageX:Math.round(cX+(window.scrollX||document.documentElement.scrollLeft||0)),pageY:Math.round(cY+(window.scrollY||document.documentElement.scrollTop||0))},'*');}function onpm(e){try{var rect=window.frameElement.getBoundingClientRect();var w=window.frameElement.clientWidth||window.frameElement.offsetWidth||rect.width||1;var h=window.frameElement.clientHeight||window.frameElement.offsetHeight||rect.height||1;var sx=(rect.width||w)/w;var sy=(rect.height||h)/h;var cx=rect.left + e.clientX * sx;var cy=rect.top + e.clientY * sy;send(Math.round(cx),Math.round(cy));}catch(_){}}window.addEventListener('pointermove',onpm,{passive:true});parent.postMessage({type:'pointer-ready'},'*');}catch(_){} })();";
+                                (doc.head || doc.documentElement).appendChild(script);
+                            } catch (_) {
+                                try { iframe.addEventListener('pointermove', handlePointerEvent, { passive: true }); } catch(_) {}
+                            }
                     }
                 } catch (e) {
                     // ignore cross-origin restrictions
                 }
-                try {
-                    // Same-origin: attach to iframe's window to get pointer positions
-                    iframe.contentWindow.addEventListener('pointermove', (ev) => {
-                        const rect = iframe.getBoundingClientRect();
-                        // ev.clientX/Y are relative to the iframe's viewport, translate to parent
-                        const clientX = rect.left + ev.clientX;
-                        const clientY = rect.top + ev.clientY;
-                        pointerX = (clientX / window.innerWidth) - 0.5;
-                        pointerY = (clientY / window.innerHeight) - 0.5;
-                        mouse.x = (clientX / window.innerWidth) * 2 - 1;
-                        mouse.y = -(clientY / window.innerHeight) * 2 + 1;
-                    }, { passive: true });
-                    // update portrait visibility when iframe loads (same-origin path)
-                    if (portraitMesh) {
-                        portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
-                    }
-                } catch (e) {
-                    // Cross-origin or access denied: fallback to pointer events on the iframe element
-                    iframe.addEventListener('pointermove', (ev) => {
-                        pointerX = (ev.clientX / window.innerWidth) - 0.5;
-                        pointerY = (ev.clientY / window.innerHeight) - 0.5;
-                        mouse.x = pointerX;
-                        mouse.y = pointerY;
-                    }, { passive: true });
-                    // update portrait visibility when iframe loads (cross-origin path)
-                    if (portraitMesh) {
-                        portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
-                    }
+                        // (no-op) keep iframe pointer settings as-is; element-level listeners below will still receive events
+                // update portrait visibility when iframe loads (path-independent)
+                if (portraitMesh) {
+                    portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
                 }
             });
+
+            // when user interacts with iframe, mark it focused
+            iframe.addEventListener('pointerdown', () => { iframeFocused = true; });
 
             const cssObject = new THREE.CSS3DObject(iframe);
             cssObject.position.set(x, y, z);
 
             const scaleFactor = 0.02;
             cssObject.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            // remember original css object scale so we can apply page zoom multiplicatively
+            cssObject.userData.baseScale = scaleFactor;
             cssScene.add(cssObject);
             // ensure portrait visibility is set based on the iframe URL right away
             if (portraitMesh) portraitMesh.visible = (lastEmbedURL && lastEmbedURL.indexOf('landingpage.html') !== -1);
@@ -474,13 +836,9 @@
 
         // Handle Resize
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            cssRenderer.setSize(window.innerWidth, window.innerHeight);
+            updateSizes();
             // update camX and default camera X for new viewport width
-            camX = getCamXForWidth(window.innerWidth);
-            if (window.innerWidth < window.innerHeight && !window.location.href.includes('landingpage.html')) {
+            if (getViewportWidth() < getViewportHeight() && !window.location.href.includes('landingpage.html')) {
                 window.location.replace('mobile.html');
             }
         });

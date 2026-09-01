@@ -302,7 +302,7 @@
                     const doc = contentFrame.contentDocument || contentFrame.contentWindow.document;
                     if (doc && contentFrame.contentWindow) {
                         const script = doc.createElement('script');
-                        script.textContent = "(function(){try{function send(cX,cY){parent.postMessage({type:'pointer',clientX:cX,clientY:cY,pageX:Math.round(cX+(window.scrollX||document.documentElement.scrollLeft||0)),pageY:Math.round(cY+(window.scrollY||document.documentElement.scrollTop||0))},'*');}function onpm(e){try{var rect=window.frameElement.getBoundingClientRect();var w=window.frameElement.clientWidth||window.frameElement.offsetWidth||rect.width||1;var h=window.frameElement.clientHeight||window.frameElement.offsetHeight||rect.height||1;var sx=(rect.width||w)/w;var sy=(rect.height||h)/h;var cx=rect.left + e.clientX * sx;var cy=rect.top + e.clientY * sy;send(Math.round(cx),Math.round(cy));}catch(_){}}window.addEventListener('pointermove',onpm,{passive:true});parent.postMessage({type:'pointer-ready'},'*');}catch(_){} })();";
+                        script.textContent = "(function(){try{function send(cX,cY){parent.postMessage({type:'pointer',clientX:cX,clientY:cY,pageX:Math.round(cX),pageY:Math.round(cY)},'*');}function onpm(e){try{var rect=window.frameElement.getBoundingClientRect();var w=window.frameElement.clientWidth||window.frameElement.offsetWidth||rect.width||1;var h=window.frameElement.clientHeight||window.frameElement.offsetHeight||rect.height||1;var sx=(rect.width||w)/w;var sy=(rect.height||h)/h;var cx=rect.left + e.clientX * sx;var cy=rect.top + e.clientY * sy;send(Math.round(cx),Math.round(cy));}catch(_){}}window.addEventListener('pointermove',onpm,{passive:true});parent.postMessage({type:'pointer-ready'},'*');}catch(_){} })();";
                         (doc.head || doc.documentElement).appendChild(script);
                     }
                 } catch (err) {
@@ -577,8 +577,8 @@
 
                 // Return page coordinates in a consistent way across browsers
                 function getEventPageCoords(ev) {
-                    const pageX = (ev.pageX !== undefined && ev.pageX !== null) ? ev.pageX : (ev.clientX + (window.scrollX || document.documentElement.scrollLeft || 0));
-                    const pageY = (ev.pageY !== undefined && ev.pageY !== null) ? ev.pageY : (ev.clientY + (window.scrollY || document.documentElement.scrollTop || 0));
+                    const pageX = (ev.pageX !== undefined && ev.pageX !== null) ? ev.pageX : (ev.clientX); // + (window.scrollX || document.documentElement.scrollLeft || 0));
+                    const pageY = (ev.pageY !== undefined && ev.pageY !== null) ? ev.pageY : (ev.clientY); // + (window.scrollY || document.documentElement.scrollTop || 0));
                     return { pageX, pageY };
                 }
 
@@ -621,8 +621,8 @@
             // ignore parent pointer events immediately after receiving iframe-posted coords
             if (Date.now() - lastIframePointerTime < 150) return;
             const { pageX, pageY } = getEventPageCoords(e);
-            const clientX = pageX - (window.scrollX || document.documentElement.scrollLeft || 0);
-            const clientY = pageY - (window.scrollY || document.documentElement.scrollTop || 0);
+            const clientX = pageX; // - (window.scrollX || document.documentElement.scrollLeft || 0);
+            const clientY = pageY; // - (window.scrollY || document.documentElement.scrollTop || 0);
             const vw = getViewportWidth();
             const vh = getViewportHeight();
             mouse.x = (clientX / vw) * 2 - 1;
@@ -632,10 +632,10 @@
         // Handle pointer coordinates forwarded from same-origin iframe content
         function handlePointerCoordsFromIframe(data) {
             // data: {pageX, pageY, clientX, clientY}
-            const pageX = (data.pageX !== undefined) ? data.pageX : (data.clientX + (window.scrollX || document.documentElement.scrollLeft || 0));
-            const pageY = (data.pageY !== undefined) ? data.pageY : (data.clientY + (window.scrollY || document.documentElement.scrollTop || 0));
-            const clientX = pageX - (window.scrollX || document.documentElement.scrollLeft || 0);
-            const clientY = pageY - (window.scrollY || document.documentElement.scrollTop || 0);
+            const pageX = (data.pageX !== undefined) ? data.pageX : (data.clientX); // + (window.scrollX || document.documentElement.scrollLeft || 0));
+            const pageY = (data.pageY !== undefined) ? data.pageY : (data.clientY); // + (window.scrollY || document.documentElement.scrollTop || 0));
+            const clientX = pageX; // - (window.scrollX || document.documentElement.scrollLeft || 0);
+            const clientY = pageY; // - (window.scrollY || document.documentElement.scrollTop || 0);
             const vw = getViewportWidth();
             const vh = getViewportHeight();
             mouse.x = (clientX / vw) * 2 - 1;
@@ -861,7 +861,7 @@
                             // inject pointer forwarder into same-origin embedded iframe documents; fall back to element-level listener if injection fails
                             try {
                                 const script = doc.createElement('script');
-                                script.textContent = "(function(){try{function send(cX,cY){parent.postMessage({type:'pointer',clientX:cX,clientY:cY,pageX:Math.round(cX+(window.scrollX||document.documentElement.scrollLeft||0)),pageY:Math.round(cY+(window.scrollY||document.documentElement.scrollTop||0))},'*');}function onpm(e){try{var rect=window.frameElement.getBoundingClientRect();var w=window.frameElement.clientWidth||window.frameElement.offsetWidth||rect.width||1;var h=window.frameElement.clientHeight||window.frameElement.offsetHeight||rect.height||1;var sx=(rect.width||w)/w;var sy=(rect.height||h)/h;var cx=rect.left + e.clientX * sx;var cy=rect.top + e.clientY * sy;send(Math.round(cx),Math.round(cy));}catch(_){}}window.addEventListener('pointermove',onpm,{passive:true});parent.postMessage({type:'pointer-ready'},'*');}catch(_){} })();";
+                                script.textContent = "(function(){try{function send(cX,cY){parent.postMessage({type:'pointer',clientX:cX,clientY:cY,pageX:Math.round(cX),pageY:Math.round(cY)},'*');}function onpm(e){try{var rect=window.frameElement.getBoundingClientRect();var w=window.frameElement.clientWidth||window.frameElement.offsetWidth||rect.width||1;var h=window.frameElement.clientHeight||window.frameElement.offsetHeight||rect.height||1;var sx=(rect.width||w)/w;var sy=(rect.height||h)/h;var cx=rect.left + e.clientX * sx;var cy=rect.top + e.clientY * sy;send(Math.round(cx),Math.round(cy));}catch(_){}}window.addEventListener('pointermove',onpm,{passive:true});parent.postMessage({type:'pointer-ready'},'*');}catch(_){} })();";
                                 (doc.head || doc.documentElement).appendChild(script);
                             } catch (_) {
                                 try { iframe.addEventListener('pointermove', handlePointerEvent, { passive: true }); } catch(_) {}

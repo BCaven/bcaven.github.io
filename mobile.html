@@ -18,9 +18,32 @@
 </head>
 <body class="mobile">
     <div id="mobilecontent">
-        <iframe width="100%" height="100%" frameborder="0" src="/landingpage.html">
-            <p>Your browser does not support iframes.</p>
-        </iframe>
+      <iframe id="mobileFrame" width="100%" height="100%" frameborder="0" src="/landingpage.html">
+        <p>Your browser does not support iframes.</p>
+      </iframe>
     </div>
+    <script>
+      (function(){
+        try {
+          const params = new URLSearchParams(window.location.search);
+          let c = params.get('content');
+          let src = '/landingpage.html';
+          if (c) {
+            try {
+              c = decodeURIComponent(c || '');
+            } catch(_) {}
+            // normalize to path for same-origin or accept absolute
+            if (/^https?:\/\//i.test(c)) {
+              try { const u = new URL(c); if (u.origin === location.origin) src = u.pathname + u.search + u.hash; else src = c; } catch(_) { src = c; }
+            } else {
+              // ensure leading slash
+              src = c.startsWith('/') ? c : ('/' + c);
+            }
+          }
+          var f = document.getElementById('mobileFrame');
+          if (f) f.src = src;
+        } catch (e) {}
+      })();
+    </script>
 </body>
 </html>

@@ -76,7 +76,8 @@
         function maybeRedirectToLanding() {
             try {
                 if (window.innerWidth < window.innerHeight) {
-                    window.location.replace('mobile.html');
+                    // preserve any query params (e.g. ?content=...) when redirecting to mobile
+                    window.location.replace('mobile.html' + window.location.search);
                 }
             } catch (e) {}
         }
@@ -142,6 +143,8 @@
         cssRenderer.domElement.style.pointerEvents = 'none'; // toggled by setIframeInteractive()
         cssRenderer.domElement.style.background = 'transparent';
         document.body.appendChild(cssRenderer.domElement);
+        // (no transform-origin modifications)
+        // (removed DPR tracking)
 
         // Full-screen transparent overlay to capture pointer events reliably
         const interactionOverlay = document.createElement('div');
@@ -213,6 +216,40 @@
         contentClose.addEventListener('click', () => { closeContent(); });
         contentOverlay.appendChild(contentClose);
         document.body.appendChild(contentOverlay);
+
+        // Mobile suggestion prompt shown when the user zooms the page high
+        const mobilePrompt = document.createElement('div');
+        mobilePrompt.id = 'mobilePrompt';
+        mobilePrompt.style.position = 'fixed';
+        mobilePrompt.style.left = '50%';
+        mobilePrompt.style.top = '12px';
+        mobilePrompt.style.transform = 'translateX(-50%)';
+        mobilePrompt.style.zIndex = '11000';
+        mobilePrompt.style.background = 'rgba(0,0,0,0.85)';
+        mobilePrompt.style.color = '#fff';
+        mobilePrompt.style.padding = '8px 12px';
+        mobilePrompt.style.borderRadius = '6px';
+        mobilePrompt.style.fontFamily = 'sans-serif';
+        mobilePrompt.style.fontSize = '13px';
+        mobilePrompt.style.display = 'none';
+        mobilePrompt.style.pointerEvents = 'auto';
+        mobilePrompt.innerHTML = '<span style="margin-right:10px;">Page zoom detected — for best experience switch to the mobile view.</span>';
+        const mobileBtn = document.createElement('button');
+        mobileBtn.innerText = 'Open Mobile View';
+        mobileBtn.style.marginLeft = '6px';
+        mobileBtn.style.cursor = 'pointer';
+        mobileBtn.addEventListener('click', () => {
+            // preserve query string
+            window.location.href = 'mobile.html' + window.location.search;
+        });
+        const mobileClose = document.createElement('button');
+        mobileClose.innerText = 'Dismiss';
+        mobileClose.style.marginLeft = '8px';
+        mobileClose.style.cursor = 'pointer';
+        mobileClose.addEventListener('click', () => { mobilePrompt.style.display = 'none'; });
+        mobilePrompt.appendChild(mobileBtn);
+        mobilePrompt.appendChild(mobileClose);
+        document.body.appendChild(mobilePrompt);
 
         // Simple cache for same-origin preloaded HTML
         const contentCache = new Map();
@@ -561,14 +598,23 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
             renderer.setSize(vw, vh);
             cssRenderer.setSize(vw, vh);
-            // Apply page zoom scale to CSS3D objects so their DOM content scales with browser zoom
-            const scale = (window.visualViewport && window.visualViewport.scale) || 1;
+            // Keep CSS3D children at their base scale; do not modify scales or DPR
             for (let i = 0; i < cssScene.children.length; i++) {
                 const child = cssScene.children[i];
                 const base = (child.userData && child.userData.baseScale) ? child.userData.baseScale : 1;
-                child.scale.set(base * scale, base * scale, base * scale);
+                child.scale.set(base, base, base);
             }
-            // no debug overlay
+
+            // If the page is zoomed large (visualViewport.scale), suggest switching to the mobile view
+            try {
+                // prefer visualViewport.scale (pinch-zoom), fall back to devicePixelRatio for desktop zoom
+                const zoomLevel = (window.visualViewport && window.visualViewport.scale) || (window.devicePixelRatio || 1);
+                if (zoomLevel > 2.0 && !window.location.pathname.toLowerCase().includes('mobile.html')) {
+                    if (mobilePrompt) mobilePrompt.style.display = 'block';
+                } else {
+                    if (mobilePrompt) mobilePrompt.style.display = 'none';
+                }
+            } catch (_) {}
         }
 
         function handlePointerEvent(e) {
@@ -623,6 +669,8 @@
         // --- ANIMATION LOOP ---
         function animate() {
             requestAnimationFrame(animate);
+
+            // (removed DPR-change detection)
 
             if (!mesh || basePositions.length === 0) {
                 camera.lookAt(camX, camY, 0);
@@ -679,6 +727,51 @@
             window.visualViewport.addEventListener('resize', updateSizes);
             window.visualViewport.addEventListener('scroll', updateSizes);
         }
+
+        // Watch for devicePixelRatio changes (desktop/browser zoom) and call updateSizes.
+        // Use matchMedia when available for efficient detection; fallback to polling.
+        (function watchDPRChanges(){
+            let lastDPR = window.devicePixelRatio || 1;
+            try {
+                function installListener(dpr) {
+                    try {
+                        const mq = window.matchMedia('(resolution: ' + dpr + 'dppx)');
+                        const handler = function() {
+                            // devicePixelRatio changed
+                            const d = window.devicePixelRatio || 1;
+                            if (d !== lastDPR) {
+                                lastDPR = d;
+                                updateSizes();
+                                // re-install listener for the new value
+                                installListener(lastDPR);
+                                try { mq.removeEventListener('change', handler); } catch(_) {}
+                            }
+                        };
+                        if (mq.addEventListener) mq.addEventListener('change', handler);
+                        else if (mq.addListener) mq.addListener(handler);
+                    } catch (e) {
+                        // fallthrough to polling
+                        lastDPR = window.devicePixelRatio || 1;
+                        const id = setInterval(() => {
+                            const d = window.devicePixelRatio || 1;
+                            if (d !== lastDPR) {
+                                lastDPR = d;
+                                updateSizes();
+                            }
+                        }, 500);
+                        // no cleanup needed for page lifetime
+                    }
+                }
+                installListener(lastDPR);
+            } catch (_) {
+                // final fallback: simple poll
+                let last = window.devicePixelRatio || 1;
+                setInterval(() => {
+                    const d = window.devicePixelRatio || 1;
+                    if (d !== last) { last = d; updateSizes(); }
+                }, 500);
+            }
+        })();
 
         // --- Embed helpers ---
         function showEmbed(url) {
@@ -806,7 +899,8 @@
             updateSizes();
             // update camX and default camera X for new viewport width
             if (getViewportWidth() < getViewportHeight() && !window.location.href.includes('landingpage.html')) {
-                window.location.replace('mobile.html');
+                // preserve query params when switching to mobile view
+                window.location.replace('mobile.html' + window.location.search);
             }
         });
 

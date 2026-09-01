@@ -11,57 +11,74 @@
     <a href="landingpage.html">Home</a>
   </nav>
   <div class="content">
-    <h1><a href="https://github.com/BCaven/OfflineRaytracingGPU">Ray tracing</a> Development</h1>
-    <h2>GPU Path tracer in C++ and Slang</h2>
+    <h1><a href="https://github.com/BCaven/OfflineRaytracingGPU" target="_blank" rel="noopener noreferrer">Offline GPU Path Tracer</a></h1>
+    <h2>Progressive Monte Carlo GPU path tracer in Slang and C++ using Vulkan</h2>
 
-    <p>Built a GPU-accelerated path tracer in Slang and C++ using Vulkan</p>
+    <p>
+      This project is a GPU-accelerated offline path tracer combining modern acceleration structures,
+      efficient instancing, and progressive rendering techniques. The renderer supports a mix of primitive types and
+      large-scale repeated geometry while targeting high performance on the GPU.
+    </p>
 
     <figure>
-      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingGPU/refs/heads/master/ProjectAssets/transformed_spheres.png" alt="Gaussian Splat demo">
-      <figcaption>Mix of Gaussian Splats and Transformed Spheres</figcaption>
+      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingGPU/master/ProjectAssets/transformed_spheres.png" alt="GPU path tracer scene with transformed spheres">
+      <figcaption>Transformed spheres and Gaussian splat content in the renderer.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingGPU/master/ProjectAssets/SplatInterior_FirstImage.png" alt="Gaussian splat interior rendering">
+      <figcaption>Gaussian splat scene rendering using stochastic ray tracing.</figcaption>
     </figure>
 
     <p>
-      A full writeup of the project can be found <a href="https://github.com/BCaven/OfflineRaytracingGPU/README.md">on GitHub</a>.
-      <br>
-      Here is a list of notable features:
-      <ul>
-        <li>Sphere, Triangle, and Gaussian Splat primitives</li>
-        <li>Instancing via Transform primitives (location, rotation, scale)</li>
-        <li>Progressive path tracing with temporal accumulation</li>
-        <li>Binary AABB interior nodes</li>
-        <li>Wide K-DOP interior nodes</li>
-        <li>Arbitrary nested transforms</li>
-        <li>Arbitrary nested instances</li>
-      </ul>
+      The full project write-up, source code, and latest updates are available on
+      <a href="https://github.com/BCaven/OfflineRaytracingGPU" target="_blank" rel="noopener noreferrer">GitHub</a>.
     </p>
 
-    <h2>CPU Path tracer in C++</h2>
+    <h3>Project features</h3>
+    <ul>
+      <li>Sphere primitives</li>
+      <li>Triangle primitives with OBJ loading</li>
+      <li>Gaussian splat primitives with PLY loading</li>
+      <li>BSDF material support including IOR and metallic parameters</li>
+      <li>Mesh lights</li>
+      <li>CPU BVH construction and GPU traversal</li>
+      <li>Progressive path tracing with temporal accumulation</li>
+      <li>Transforms (location, rotation, and scale)</li>
+      <li>Instancing support</li>
+      <li>TLAS/BLAS separation</li>
+      <li>Mixed node types in the same tree, including transform nodes, primitives, binary AABB nodes, and 8-wide KDOP nodes</li>
+      <li>Nested instances and nested transforms</li>
+      <li>Arbitrarily large repeated-geometry scenes with reduced memory and build-time cost</li>
+    </ul>
 
-    <p>Built a Monte Carlo path tracer in C++ based on the <a href="https://raytracing.github.io/">tutorials</a> RaytracingInAWeekend, RaytracingTheNextWeek, and RaytracingTheRestOfYourLife.</p>
-
-    <figure>
-      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingCPU/refs/heads/master/tomato_in_cornell_box_new_normals.png" alt="Gaussian Splat demo">
-      <figcaption>Gaussian Splat demo in Cornell Box - 200 samples</figcaption>
-    </figure>
-    <figure>
-      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingCPU/refs/heads/master/thecouncil.png" alt="Raytracer demo">
-      <figcaption>early example scene - 4000 samples</figcaption>
-    </figure>
-    <figure>
-      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingCPU/refs/heads/master/restofmylife.png" alt="Raytracer multiple lights demo">
-      <figcaption>later example scene with many lights - 1000 samples</figcaption>
-    </figure>
-
+    <h3>What these features enable</h3>
     <p>
-      In addition to the base functionality from the tutorials, I implemented multi-core tile based rendering, 
-      instanced triangle mesh structures with custom UV maps, nested Bounding Volume Hierarchies, 
-      and a custom file format to import meshes into the raytracer from Blender.
-      <br>
-      I also added support for Gaussian Splats as native objects so they support reflections, shadows, and relighting.
+      The renderer is designed to handle complex scenes with repeated objects and large-scale instance hierarchies while
+      keeping memory usage manageable. Transform and nested-instance structures allow a scene to be represented efficiently,
+      making it possible to build scenes with many repeated groups of geometry without paying a full cost for each copy.
+      The project also combines path tracing with temporal accumulation to refine the image progressively over time,
+      creating high-quality images while still being responsive to real-time camera repositioning.
     </p>
-  
 
-</div>
+    <h3>Implementation details</h3>
+    <p>
+      The project uses a Vulkan-based GPU pipeline with Slang for shader logic and C++ for engine structure and scene setup.
+      Scene acceleration is organized around a hierarchy of instances and collections, and mixed node types help balance
+      traversal efficiency and flexibility. Gaussian splat support is handled with stochastic ray tracing techniques to model
+      transparency and alpha blending in a Monte Carlo framework.
+    </p>
+
+    <h3>References and related work</h3>
+    <ul>
+      <li>Sun, Xin, et al. “Stochastic Ray Tracing of Transparent 3D Gaussians”</li>
+      <li>Benjamin Feldman, “3D Gaussian Splatting in a Weekend”</li>
+      <li>Arman Uguray, “Ray Tracing: GPU Edition”</li>
+      <li>Vaidyanathan, Karthik, Sven Woop, and Carsten Benthin, “Wide BVH traversal with a short stack”</li>
+    </ul>
+
+    <p>If you were looking for my CPU path tracer instead, you can find it <a href="cpuraytracing.html">here</a>.</p>
+  </div>
+
 </body>
 </html>

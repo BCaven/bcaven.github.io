@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CPU Ray tracing</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <nav class="nav-menu" aria-label="Main navigation">
+    <a href="landingpage.html">Home</a>
+  </nav>
+  <div class="content">
+    <h1><a href="https://github.com/BCaven/OfflineRaytracingCPU">CPU Ray tracing</a> Development</h1>
+    
+    <h2>CPU Path tracer in C++</h2>
+
+    <p>Prior to building the GPU path tracer, I developed a CPU-based Monte Carlo path tracer in C++ based on the <a href="https://raytracing.github.io/">tutorials</a> RaytracingInAWeekend, RaytracingTheNextWeek, and RaytracingTheRestOfYourLife.</p>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingCPU/refs/heads/master/tomato_in_cornell_box_new_normals.png" alt="Gaussian Splat demo">
+      <figcaption>Gaussian Splat demo in Cornell Box - 200 samples</figcaption>
+    </figure>
+    <figure>
+      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingCPU/refs/heads/master/thecouncil.png" alt="Raytracer demo">
+      <figcaption>early example scene - 4000 samples</figcaption>
+    </figure>
+    <figure>
+      <img src="https://raw.githubusercontent.com/BCaven/OfflineRaytracingCPU/refs/heads/master/restofmylife.png" alt="Raytracer multiple lights demo">
+      <figcaption>later example scene with many lights - 1000 samples</figcaption>
+    </figure>
+
+    <p>
+      In addition to the base functionality from the tutorials, I implemented multi-core tile based rendering, 
+      instanced triangle mesh structures with custom UV maps, nested binary AABB Bounding Volume Hierarchies, 
+      and a custom file format to import meshes into the raytracer from Blender.
+      <br>
+      I also added support for Gaussian Splats as native objects so they support reflections, shadows, and relighting.
+    </p>
+  
+
+</div>
+</body>
+</html>

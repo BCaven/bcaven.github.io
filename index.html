@@ -829,8 +829,9 @@
                             }
                                 try {
                                     const urlObj = new URL(href);
-                                    // treat links to the resume PDF as external even though they are same-origin
-                                    if (urlObj.origin !== origin || urlObj.pathname.endsWith('Resume-Blake-Caven-Fall25.pdf')) {
+                                    const isPdfLink = urlObj.pathname.toLowerCase().endsWith('.pdf');
+                                    // Treat all PDF links as external even when they are same-origin.
+                                    if (urlObj.origin !== origin || isPdfLink) {
                                         link.setAttribute('target', '_blank');
                                         // intercept click and open externally
                                         link.addEventListener('click', (evt) => {

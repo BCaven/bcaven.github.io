@@ -392,6 +392,7 @@
         // On initial load, check for ?content=... so direct links open overlay or redirect subpage hits to index
         (function checkInitialContent() {
             try {
+                const knownSubpages = ['landingpage.html','raytracing.html','GameEngine.html','ND_Studios_VirtProd.html','CV.html','portfolio.html'];
                 const params = new URLSearchParams(window.location.search);
                 const c = params.get('content');
                 if (c) {
@@ -404,15 +405,15 @@
                         if (/^https?:\/\//i.test(page)) {
                             try { const u = new URL(page); if (u.origin === location.origin) page = u.pathname.replace(/^\//, ''); } catch(_) {}
                         }
-                        requestedPage = page || requestedPage;
+                        requestedPage = knownSubpages.find((knownPage) => knownPage.toLowerCase() === page.toLowerCase()) || page || requestedPage;
                     } catch (e) {}
                 }
                 // If user landed directly on a known subpage (e.g. /raytracing.html), redirect to index.html with ?content=path
-                const knownSubpages = ['landingpage.html','raytracing.html','GameEngine.html','ND_Studios_VirtProd.html','CV.html','portfolio.html'];
                 try {
                     const path = window.location.pathname.replace(/^\//, '');
-                    if (path && path.toLowerCase() !== 'index.html' && knownSubpages.indexOf(path) !== -1) {
-                        const target = 'index.html?content=' + encodeURIComponent('/' + path);
+                    const knownPage = knownSubpages.find((subpage) => subpage.toLowerCase() === path.toLowerCase());
+                    if (path && path.toLowerCase() !== 'index.html' && knownPage) {
+                        const target = 'index.html?content=' + encodeURIComponent('/' + knownPage);
                         window.location.replace(target);
                     }
                 } catch(_) {}
